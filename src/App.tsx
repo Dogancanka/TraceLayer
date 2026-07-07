@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Toolbar } from './components/Toolbar';
-import { PaperStack } from './components/PaperStack';
-import { ImageLayer } from './components/ImageLayer';
-import { nextId } from './types';
+import { LayerStack } from './components/LayerStack';
+import { nextId, normalizeProject } from './types';
 import type { ImageItem, PaperSheet, ProjectFile } from './types';
 
 const randomTilt = () => (Math.random() - 0.5) * 1.6;
@@ -58,15 +57,24 @@ export default function App() {
 
   const addPaper = useCallback(() => {
     setPapers((prev) => [...prev, { id: nextId(), tilt: randomTilt() }]);
+    setSelectedId(null); // whatever was selected is now under the new sheet
   }, []);
 
   const importImage = useCallback(async () => {
     const dataUrl = await window.traceLayer.importImage();
     if (!dataUrl) return;
-    const img: ImageItem = { id: nextId(), dataUrl, x: 0, y: 0, scale: 1, rotation: 0 };
+    const img: ImageItem = {
+      id: nextId(),
+      dataUrl,
+      x: 0,
+      y: 0,
+      scale: 1,
+      rotation: 0,
+      paperId: papers[papers.length - 1].id, // imports land on the top sheet
+    };
     setImages((prev) => [...prev, img]);
     setSelectedId(img.id);
-  }, []);
+  }, [papers]);
 
   const updateImage = useCallback((id: string, patch: Partial<ImageItem>) => {
     setImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...patch } : img)));
@@ -81,11 +89,12 @@ export default function App() {
     const raw = await window.traceLayer.loadProject();
     if (!raw) return;
     try {
-      const project = JSON.parse(raw) as ProjectFile;
-      if (project.version !== 1 || !Array.isArray(project.papers) || !Array.isArray(project.images)) {
+      const parsed = JSON.parse(raw) as ProjectFile;
+      if (parsed.version !== 1 || !Array.isArray(parsed.papers) || !Array.isArray(parsed.images)) {
         throw new Error('Not a TraceLayer v1 project');
       }
-      setPapers(project.papers.length > 0 ? project.papers : [{ id: nextId(), tilt: 0 }]);
+      const project = normalizeProject(parsed);
+      setPapers(project.papers);
       setImages(project.images);
       setOpacity(typeof project.opacity === 'number' ? project.opacity : 0.85);
       setSelectedId(null);
@@ -103,8 +112,8 @@ export default function App() {
         style={{ opacity }}
         onPointerDown={() => setSelectedId(null)}
       >
-        <PaperStack papers={papers} />
-        <ImageLayer
+        <LayerStack
+          papers={papers}
           images={images}
           selectedId={selectedId}
           ghost={ghost}

@@ -14,6 +14,11 @@ export interface ImageItem {
   scale: number;
   /** Degrees. */
   rotation: number;
+  /**
+   * The sheet this image sits on. Sheets and their images render
+   * interleaved, so a newer sheet covers older sheets' images.
+   */
+  paperId: string;
 }
 
 /**
@@ -42,3 +47,21 @@ export interface ProjectFile {
 let idCounter = 0;
 export const nextId = (): string =>
   `${Date.now().toString(36)}-${(idCounter++).toString(36)}`;
+
+/**
+ * Fill in fields that older project files (still version 1) may lack, so
+ * loading stays backwards compatible. Images without a paperId land on the
+ * top sheet, where they remain interactive.
+ */
+export function normalizeProject(project: ProjectFile): ProjectFile {
+  const papers = project.papers.length > 0 ? project.papers : [{ id: nextId(), tilt: 0 }];
+  const topPaperId = papers[papers.length - 1].id;
+  return {
+    ...project,
+    papers,
+    images: project.images.map((img) => ({
+      ...img,
+      paperId: img.paperId ?? topPaperId,
+    })),
+  };
+}

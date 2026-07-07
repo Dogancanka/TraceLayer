@@ -2,33 +2,8 @@ import { useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react';
 import type { ImageItem } from '../types';
 
-interface ImageLayerProps {
-  images: ImageItem[];
-  selectedId: string | null;
-  ghost: boolean;
-  onSelect: (id: string | null) => void;
-  onChange: (id: string, patch: Partial<ImageItem>) => void;
-}
-
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 20;
-
-export function ImageLayer({ images, selectedId, ghost, onSelect, onChange }: ImageLayerProps) {
-  return (
-    <div className="image-layer">
-      {images.map((img) => (
-        <ImageView
-          key={img.id}
-          img={img}
-          selected={img.id === selectedId}
-          ghost={ghost}
-          onSelect={onSelect}
-          onChange={onChange}
-        />
-      ))}
-    </div>
-  );
-}
 
 interface ImageViewProps {
   img: ImageItem;
@@ -38,7 +13,7 @@ interface ImageViewProps {
   onChange: (id: string, patch: Partial<ImageItem>) => void;
 }
 
-function ImageView({ img, selected, ghost, onSelect, onChange }: ImageViewProps) {
+export function ImageView({ img, selected, ghost, onSelect, onChange }: ImageViewProps) {
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {

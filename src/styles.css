@@ -49,16 +49,17 @@ body,
 
 /* ---- Paper ---- */
 
-.paper-stack,
-.paper-stack .paper-sheet,
-.image-layer {
+.layer-stack {
   position: absolute;
   inset: 0;
 }
 
 .paper-sheet {
+  position: absolute;
   inset: 18px;
-  background-color: #f7f2e6;
+  /* Translucent like real tracing paper: layers underneath show through
+     dimmed, so a new sheet visibly covers previous work. */
+  background-color: rgba(247, 242, 230, 0.84);
   /* Subtle fiber grain + soft vignette to read as tracing paper. */
   background-image:
     repeating-linear-gradient(
