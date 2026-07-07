@@ -28,6 +28,11 @@ const api = {
   /** Open a file dialog and read a project JSON. Resolves to the raw text, or null. */
   loadProject: (): Promise<string | null> => ipcRenderer.invoke('load-project'),
 
+  /** Minimize the overlay to the taskbar without quitting. */
+  hideWindow: (): void => {
+    ipcRenderer.send('hide-window');
+  },
+
   /** Quit the app (frameless window has no OS close button). */
   closeApp: (): void => {
     ipcRenderer.send('close-app');

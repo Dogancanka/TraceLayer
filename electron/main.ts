@@ -117,6 +117,12 @@ app.whenReady().then(() => {
     return fs.readFile(result.filePaths[0], 'utf-8');
   });
 
+  // Hide = minimize. The overlay leaves the screen but the app keeps
+  // running; restore from the taskbar. Deliberately not app.quit().
+  ipcMain.on('hide-window', () => {
+    win?.minimize();
+  });
+
   ipcMain.on('close-app', () => {
     app.quit();
   });

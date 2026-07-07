@@ -19,7 +19,8 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Opacity slider
 - [x] Save/load project as local JSON
 - [x] Minimal floating toolbar + window drag regions
-- [ ] Manual verification pass on Windows: Ghost Mode click-through over real apps (Notepad, browser, CAD) — **do this first**
+- [x] Toolbar UI polish: beige paper theme, bottom-center, collapse/expand pill, settings popover (opacity + shortcuts), Hide (minimize) beside ✕, page-controller placeholder for future PDF pages
+- [ ] Manual verification pass on Windows: Ghost Mode click-through over real apps (Notepad, browser, CAD) — **do this first**; include collapsed-toolbar hover in Ghost Mode and Hide→restore
 - [ ] Verify frameless transparent window edge-resize behaves on Windows 11; add fallback (resize handles) if not
 
 ## Milestone 0.1.x — hardening (only after manual verification)

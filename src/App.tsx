@@ -121,6 +121,7 @@ export default function App() {
         onOpacityChange={setOpacity}
         onSave={() => void saveProject()}
         onLoad={() => void loadProject()}
+        onHide={() => window.traceLayer.hideWindow()}
         onClose={() => window.traceLayer.closeApp()}
       />
     </>

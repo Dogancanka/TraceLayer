@@ -2,11 +2,19 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (initial vertical slice)
+**Last updated:** 2026-07-07 (toolbar UI polish)
 
 ## Current state
 
-Repo foundation + full MVP 0.1 vertical slice implemented in one pass. `npm run typecheck` and `npm run build` pass; the app launches and creates the TraceLayer window (verified programmatically — the process runs and the window exists).
+MVP 0.1 vertical slice + toolbar UI polish pass. `npm run typecheck` and `npm run build` pass.
+
+Latest change (UI polish only, no architecture changes):
+
+- Toolbar restyled to a warm beige paper-like theme (rounded, soft shadow, subtle border); stays bottom-centered and compact.
+- **Collapse**: ▾ button collapses the bar to a small "▲ TraceLayer" pill; clicking it restores the bar. The collapsed pill keeps the `.toolbar` class — the Ghost Mode hover check in `App.tsx` matches `.toolbar`, so the pill stays clickable in Ghost Mode and Ghost Mode remains exitable (plus Ctrl+Alt+G always works). Do not rename that class without updating the hover check.
+- **Settings popover** (⚙): opacity slider moved here, plus a shortcuts reference. Popover closes automatically when Ghost Mode starts. Primary bar keeps: New Paper, Import, page controller, Ghost, Save, Load, Settings, Collapse, Hide, ✕.
+- **Hide button** (–) beside ✕: minimizes the window via IPC `hide-window` → `win.minimize()`; restore from taskbar. Does not quit.
+- **Page controller placeholder**: disabled ‹ 1 / 1 › in the bar. Data model reserved as optional `pages?: DocumentPages` on `ProjectFile` (`src/types.ts`) — not populated, no version bump needed; future PDF pages should render to images and reuse the ImageItem pipeline.
 
 ## What works (implemented, typechecked, app launches)
 
@@ -15,7 +23,7 @@ Repo foundation + full MVP 0.1 vertical slice implemented in one pass. `npm run 
 - Ghost Mode: `setIgnoreMouseEvents(ghost, { forward: true })`, owned by main process; toggled via toolbar or global **Ctrl+Alt+G**; toolbar stays clickable in Ghost Mode via hover-based ignore toggling
 - Edit Mode: New Paper (with drop-on-top animation), PNG/JPG import (native dialog → embedded data URL), image drag/wheel-scale/Shift+wheel-rotate, Delete to remove, opacity slider
 - Save/load `.tracelayer.json` via native dialogs (versioned format, see ARCHITECTURE.md)
-- Minimal floating toolbar; window movable via top drag strip and toolbar grip; quit button
+- Minimal floating beige toolbar (bottom-center): collapse/expand, settings popover with opacity + shortcuts, Hide (minimize) and ✕ (quit), disabled page-controller placeholder; window movable via top drag strip and toolbar grip
 
 ## What does not work yet / unverified
 
@@ -42,4 +50,4 @@ npm run dev     # or: npm run start
 
 ## Next recommended task
 
-**Manual verification of Ghost Mode on Windows 11** (top of TASKS.md): launch, put the window over Notepad/a browser, toggle Ghost Mode (button and Ctrl+Alt+G), confirm clicks land underneath, confirm the toolbar still responds to hover+click, confirm Ctrl+Alt+G exits. Fix whatever that surfaces before touching anything else.
+**Manual verification of Ghost Mode on Windows 11** (top of TASKS.md): launch, put the window over Notepad/a browser, toggle Ghost Mode (button and Ctrl+Alt+G), confirm clicks land underneath, confirm the toolbar still responds to hover+click (also while collapsed), confirm Ctrl+Alt+G exits, confirm Hide→taskbar restore works. Fix whatever that surfaces before touching anything else.

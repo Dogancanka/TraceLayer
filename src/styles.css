@@ -126,27 +126,31 @@ body,
   outline: none;
 }
 
-/* ---- Toolbar ---- */
+/* ---- Toolbar (warm beige, paper-like) ---- */
 
 .toolbar {
   position: fixed;
-  bottom: 14px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   padding: 6px 10px;
-  border-radius: 10px;
-  background: rgba(38, 35, 30, 0.88);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  background: rgba(246, 240, 227, 0.96);
+  border: 1px solid rgba(160, 148, 122, 0.55);
+  box-shadow:
+    0 6px 22px rgba(60, 50, 30, 0.28),
+    0 1px 4px rgba(60, 50, 30, 0.14);
   backdrop-filter: blur(6px);
+  color: #4a4234;
 }
 
 .toolbar-grip {
   -webkit-app-region: drag;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(74, 66, 52, 0.5);
   font-size: 14px;
   padding: 2px 6px;
   cursor: grab;
@@ -155,17 +159,17 @@ body,
 .toolbar button {
   -webkit-app-region: no-drag;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 5px 10px;
   font-size: 12px;
-  color: #f0ece2;
-  background: rgba(255, 255, 255, 0.08);
+  color: #4a4234;
+  background: rgba(74, 66, 52, 0.06);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .toolbar button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(74, 66, 52, 0.15);
 }
 
 .toolbar button:disabled {
@@ -178,26 +182,121 @@ body,
   color: #fff;
 }
 
+.toolbar .icon-btn,
+.toolbar .settings-btn {
+  padding: 5px 8px;
+  min-width: 28px;
+}
+
+.toolbar .settings-btn.active {
+  background: rgba(74, 66, 52, 0.2);
+}
+
+.toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 3px 2px;
+  background: rgba(160, 148, 122, 0.45);
+}
+
 .toolbar .close-btn {
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(74, 66, 52, 0.6);
+  padding: 5px 8px;
 }
 
 .toolbar .close-btn:hover {
-  background: rgba(220, 70, 60, 0.85);
+  background: rgba(220, 70, 60, 0.9);
   color: #fff;
 }
 
-.opacity-control {
-  -webkit-app-region: no-drag;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: rgba(240, 236, 226, 0.8);
-  font-size: 11px;
+/* Collapsed state: a small pill handle, still `.toolbar` so the Ghost Mode
+   hover check keeps working. */
+.toolbar-collapsed {
+  padding: 3px;
 }
 
-.opacity-control input[type='range'] {
-  width: 90px;
+.toolbar .expand-btn {
+  font-size: 11px;
+  padding: 4px 12px;
+  background: transparent;
+  color: rgba(74, 66, 52, 0.75);
+}
+
+/* ---- Page controller (placeholder for future PDF pages) ---- */
+
+.page-controller {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 2px;
+}
+
+.page-controller .page-label {
+  font-size: 11px;
+  color: rgba(74, 66, 52, 0.6);
+  min-width: 34px;
+  text-align: center;
+}
+
+.page-controller button {
+  padding: 3px 7px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ---- Settings popover ---- */
+
+.settings-wrap {
+  position: relative;
+  display: flex;
+}
+
+.settings-popover {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: -8px;
+  width: 230px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(246, 240, 227, 0.98);
+  border: 1px solid rgba(160, 148, 122, 0.55);
+  box-shadow: 0 8px 26px rgba(60, 50, 30, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: #4a4234;
+}
+
+.settings-row input[type='range'] {
+  width: 130px;
   accent-color: #4a7dd6;
+}
+
+.settings-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(74, 66, 52, 0.75);
+  border-top: 1px solid rgba(160, 148, 122, 0.35);
+  padding-top: 10px;
+}
+
+.settings-hints-title {
+  font-weight: 600;
+  color: #4a4234;
+}
+
+.settings-hints > div:not(.settings-hints-title) {
+  display: flex;
+  justify-content: space-between;
 }
