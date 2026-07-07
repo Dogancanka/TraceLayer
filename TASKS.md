@@ -64,6 +64,18 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [ ] App icon
 - [ ] Packaging with electron-builder (portable exe / NSIS installer)
 
+## Markup + sheet navigation (2026-07-07)
+
+- [x] Text/Note tool: click the active sheet to place an editable, movable note bubble (`src/components/TextBoxView.tsx`); minimal beige/paper style, drag by grip, edit by clicking the text
+- [x] Callout tool: click the active sheet to place a bubble with an arrow pointing at the click point; drag the bubble (grip) and the arrow target (small handle, when selected) independently; per-callout `style.color` (toolbar color dots while the tool is active)
+- [x] Callouts render above images/strokes, below the ruler/toolbar/selection outlines (see ARCHITECTURE.md layering)
+- [x] Text boxes and callouts belong to a single sheet (`sheetId`) and save/load with the project
+- [x] Sheet previous/next navigation: toolbar buttons + "Sheet i/N" label, Alt+Up/Down and PageUp/PageDown shortcuts; introduces `activeSheetId` as the target for new strokes/text/callouts/imports, independent of the sheet stack's fixed z-order (see ARCHITECTURE.md "Active sheet vs. top sheet")
+- [x] Data model: `PaperSheet` gained `textBoxes`, `callouts`, and a reserved (unused) `calibration` placeholder; `ProjectFile.version` bumped to a real schema version (`SCHEMA_VERSION = 2`); `normalizeProject()` upgrades v1 files and older/partial v2 files with safe defaults
+- [x] Undo/redo: text box/callout create, delete, drag, and edit-session-start all push history the same way image drags already did — no changes needed to the history engine since the new arrays live inside `papers` (already snapshotted). Ctrl+Z/Y are suppressed while a text field has focus so native in-field text undo isn't hijacked.
+- [ ] Known simplification: when the active sheet isn't the topmost one, its highlight ring can be mostly covered by sheets stacked above it (translucent tracing-paper stacking is unchanged). The toolbar's "Sheet i/N" label is the reliable indicator; a more visible non-topmost-sheet affordance is future work if this turns out to matter in practice.
+- [ ] Not done (out of scope for this pass): resizing text boxes/callouts, per-textbox color/style, multiple callout arrow targets, per-sheet calibration UI (the `calibration` field is a placeholder only)
+
 ## Later
 
 See [ROADMAP.md](ROADMAP.md). Do not start roadmap items while 0.1 verification tasks are open.

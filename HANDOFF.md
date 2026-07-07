@@ -2,9 +2,21 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (Snapshot feature)
+**Last updated:** 2026-07-07 (Markup annotations + sheet navigation)
 
 ## Current state
+
+Latest: **Text notes, callout bubbles with arrows, and sheet up/down navigation.**
+
+- **Text/Note tool** (`src/components/TextBoxView.tsx`): toolbar "Note" tool, click the active sheet to place a small beige, editable, movable note. Drag its grip (⠿) to move; click its text to edit (a `contentEditable` div, read back via `innerText` so multi-line notes round-trip). Belongs to a sheet (`TextBox.sheetId`) and renders/hit-tests within that sheet's layer, same covered-by-newer-sheet rule as images.
+- **Callout tool** (`src/components/CalloutView.tsx`): toolbar "Callout" tool (with color dots, like the pen), click the active sheet to place a bubble with an arrow pointing at the click point (bubble spawns offset up-left of the target). Drag the bubble's grip to move the bubble; select it and drag the small circular handle to re-aim the arrow target independently. The arrow itself is one shared per-sheet SVG line layer (`callout-arrow-layer` in `LayerStack`) with an arrowhead marker, rendered above that sheet's images/strokes.
+- **Sheet navigation**: toolbar ⌃/⌄ buttons + a "Sheet i/N" label, plus **Alt+Up/Down** and **PageUp/PageDown**. This introduces `activeSheetId` — which sheet new strokes/text/callouts/imports land on — decoupled from the sheet stack's z-order (the stack itself never reorders; see ARCHITECTURE.md "Active sheet vs. top sheet"). New Sheet still adds on top and makes that sheet active, matching prior behavior when you never navigate away. Not a PDF page control — the existing disabled "1/1" page-controller placeholder is untouched and visually separated from this.
+- **Data model / schema version bump**: `PaperSheet` now carries `textBoxes`, `callouts`, and a reserved (unused) `calibration` placeholder alongside `strokes`. `ProjectFile.version` is a real schema version now (`SCHEMA_VERSION = 2` in `src/types.ts`); `normalizeProject()` upgrades v1 files (and older/partial v2 files) with safe defaults — verified with a standalone script exercising v1 input, partial-v2 input, and an empty-papers edge case (all pass; see TASKS.md).
+- **Selection generalized**: the old image-only `selectedId` became `selection: { kind: 'image'|'text'|'callout', id } | null`, threaded through `LayerStack`/`Toolbar`/the Delete-key handler.
+- **Undo/redo**: text box/callout create, delete, drag, and "start editing" all push a history snapshot exactly like image drags already did. No changes were needed to the history engine itself — `textBoxes`/`callouts` live inside `papers`, which was already fully snapshotted. Ctrl+Z/Ctrl+Y and the Delete/Backspace shortcut are now suppressed while a text box/callout has focus (`document.activeElement.isContentEditable`), so typing and native in-field undo aren't hijacked by the app-level history.
+- **Verification**: `npm run typecheck` and `npm run build` pass. No test framework exists in this repo (no test script, no test files), so the schema-normalization logic was additionally checked with a standalone esbuild-compiled script exercising `normalizeProject()` against v1/v2/edge-case inputs (all assertions passed). **Not manually verified in a running Electron window** — this pass was done from a phone-only session per instructions; the interaction code (drag via pointer capture, contentEditable focus/read-back, stage click routing) follows the same patterns already used and verified for images/strokes, but placing/editing/dragging text boxes and callouts and the sheet-nav buttons have not been clicked through by a human yet. Recommend a manual pass on Windows before considering this fully done (see TASKS.md).
+
+Earlier state:
 
 Latest: **Snapshot (screenshot-and-trace)** — camera button in the toolbar captures the screen *under* the overlay and drops it on the top sheet as a normal image, aligned 1:1 with the screen. Flow: IPC `capture-under` → main sets `win.setOpacity(0)`, waits 150 ms for the compositor, grabs the matching display via `desktopCapturer` at physical resolution, crops to the window bounds, restores opacity, returns `{dataUrl, scaleFactor}`; renderer inserts an ImageItem at center with `scale = 1/scaleFactor`. Local only, user-triggered, nothing persisted or sent anywhere. Verified end-to-end via CDP (captured desktop visible on the sheet, natural size = window × scaleFactor). Known edge: a window straddling two monitors captures only the best-matching display (TASKS.md).
 
@@ -44,14 +56,17 @@ Earlier changes:
 - Electron + React + TS + Vite scaffold; dev (`npm run dev`) and prod-style (`npm run start`) flows
 - Transparent, frameless, always-on-top window (`screen-saver` level)
 - Ghost Mode: `setIgnoreMouseEvents(ghost, { forward: true })`, owned by main process; toggled via toolbar or global **Ctrl+Alt+G**; toolbar stays clickable in Ghost Mode via hover-based ignore toggling
-- Edit Mode: New Paper (with drop-on-top animation), PNG/JPG import (native dialog → embedded data URL), image drag/wheel-scale/Shift+wheel-rotate, Delete to remove, opacity slider
-- Save/load `.tracelayer.json` via native dialogs (versioned format, see ARCHITECTURE.md)
-- Minimal floating beige toolbar (bottom-center): collapse/expand, settings popover with opacity + shortcuts, Hide (minimize) and ✕ (quit), disabled page-controller placeholder; window movable via top drag strip and toolbar grip
+- Edit Mode: New Paper (with drop-on-top animation), PNG/JPG import (native dialog → embedded data URL) onto the active sheet, image drag/wheel-scale/Shift+wheel-rotate, Delete to remove, opacity slider
+- Sheet navigation: prev/next toolbar buttons + "Sheet i/N" label, Alt+Up/Down and PageUp/PageDown
+- Text notes and callout bubbles with arrows: place, drag, edit, delete; scoped to a sheet
+- Save/load `.tracelayer.json` via native dialogs (versioned format, see ARCHITECTURE.md), including text boxes/callouts, with safe defaults for older files
+- Minimal floating beige toolbar (bottom-center): collapse/expand, settings popover with opacity + shortcuts, Hide (minimize) and ✕ (quit), disabled page-controller placeholder (PDF, unrelated to sheet nav); window movable via top drag strip and toolbar grip
 
 ## What does not work yet / unverified
 
 - **Ghost Mode click-through has NOT been manually verified over real apps.** The implementation is the standard Electron pattern, but nobody has clicked through onto Notepad/browser/CAD yet. This is the first thing to verify (TASKS.md).
-- Scale UI sets labels and drives the ruler, but real measured calibration (pick two points, enter distance → `pixelsPerUnit`) does not exist yet; ruler lengths are approximate (assume 96 dpi CSS px).
+- **Text boxes, callouts, and sheet navigation have not been manually clicked through in a running window** — this pass was implemented and verified via typecheck/build plus a standalone script exercising `normalizeProject()`, from a phone-only session. Recommend a manual pass (place/edit/drag a note and a callout, navigate sheets, save/reload) before fully trusting it.
+- Scale UI sets labels and drives the ruler, but real measured calibration (pick two points, enter distance → `pixelsPerUnit`) does not exist yet; ruler lengths are approximate (assume 96 dpi CSS px). The new per-sheet `calibration` field is a placeholder only — nothing reads or writes it yet.
 - Eraser verified in code review only; pen verified visually via CDP screenshots.
 - Edge-resizing a transparent frameless window on Windows is historically finicky in Electron; unverified.
 - Paper rotation (0.2 item): not implemented — needs pointer-coordinate mapping design so drawing works on a rotated stage.
@@ -61,14 +76,16 @@ Earlier changes:
 ## Known issues / sharp edges
 
 - Strokes are not clipped to the sheet edge — drawing can extend past the paper border (cosmetic).
-- Strokes/images are window-center-relative: resizing the window shifts content relative to the paper edges.
+- Strokes/images/text boxes/callouts are window-center-relative: resizing the window shifts content relative to the paper edges.
 - Loading a project replaces the current document (it does push an undo snapshot first).
 - Images are embedded in project JSON as base64 data URLs → large images make large project files.
 - Load failure shows a plain `alert()`.
 - Window position/size not persisted between launches.
 - Opening DevTools docked can break window transparency — open detached if needed.
-- `Backspace` also deletes the selected image (same handler as `Delete`).
+- `Backspace` also deletes the selected image/text box/callout (same handler as `Delete`), but only when a text field doesn't have focus (so backspacing inside a note edits its text instead of deleting the note).
 - Global shortcut Ctrl+Alt+G is registered system-wide while the app runs; collides with any other app using it.
+- When the active sheet (target of new content) isn't the topmost sheet, its highlight ring can be mostly hidden behind sheets stacked above it — the tracing-paper stack itself never reorders. The toolbar's "Sheet i/N" label is the reliable indicator of which sheet is active.
+- Text box/callout resizing is not implemented (height grows with content; width is fixed at creation).
 
 ## How to run
 
@@ -80,3 +97,5 @@ npm run dev     # or: npm run start
 ## Next recommended task
 
 **Manual verification of Ghost Mode on Windows 11** (top of TASKS.md): launch, put the window over Notepad/a browser, toggle Ghost Mode (button and Ctrl+Alt+G), confirm clicks land underneath, confirm the toolbar still responds to hover+click (also while collapsed), confirm Ctrl+Alt+G exits, confirm Hide→taskbar restore works. Fix whatever that surfaces before touching anything else.
+
+Once a human is at a keyboard, also do a manual pass on this session's markup/navigation work (see "What does not work yet" above): place a text note and a callout, drag/edit/delete each, navigate sheets with the toolbar buttons and with Alt+Up/Down + PageUp/PageDown, save the project, reload it, and confirm everything comes back. Also try loading a pre-existing (older) `.tracelayer.json` project file to confirm it still opens cleanly.

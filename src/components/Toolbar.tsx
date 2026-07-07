@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { uncalibratedScale } from '../types';
 import type { ScaleCalibration, Tool } from '../types';
 import {
+  CalloutIcon,
   CameraIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -16,6 +17,7 @@ import {
   ImageIcon,
   LayersPlusIcon,
   MinusIcon,
+  NoteIcon,
   PenIcon,
   RedoIcon,
   RulerIcon,
@@ -42,6 +44,13 @@ interface ToolbarProps {
   penWidth: number;
   onPenColorChange: (color: string) => void;
   onPenWidthChange: (width: number) => void;
+  calloutColor: string;
+  onCalloutColorChange: (color: string) => void;
+  /** 0-based index of the active sheet, and how many sheets exist. */
+  sheetIndex: number;
+  sheetCount: number;
+  onPrevSheet: () => void;
+  onNextSheet: () => void;
   onNewProject: () => void;
   onToolChange: (tool: Tool) => void;
   onUndo: () => void;
@@ -72,6 +81,12 @@ export function Toolbar({
   penWidth,
   onPenColorChange,
   onPenWidthChange,
+  calloutColor,
+  onCalloutColorChange,
+  sheetIndex,
+  sheetCount,
+  onPrevSheet,
+  onNextSheet,
   onNewProject,
   onToolChange,
   onUndo,
@@ -137,7 +152,7 @@ export function Toolbar({
         className="icon-btn"
         onClick={onImport}
         disabled={ghost}
-        title="Import PNG/JPG"
+        title="Import PNG/JPG onto the active sheet"
       >
         <ImageIcon />
       </button>
@@ -146,7 +161,7 @@ export function Toolbar({
         className="icon-btn"
         onClick={onCapture}
         disabled={ghost}
-        title="Snapshot: capture the screen under the overlay onto the top sheet (aligned 1:1)"
+        title="Snapshot: capture the screen under the overlay onto the active sheet (aligned 1:1)"
       >
         <CameraIcon />
       </button>
@@ -158,7 +173,7 @@ export function Toolbar({
         className={`icon-btn${tool === 'pen' ? ' active-tool' : ''}`}
         onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
         disabled={ghost}
-        title="Pen: draw on the top sheet"
+        title="Pen: draw on the active sheet"
       >
         <PenIcon />
       </button>
@@ -192,10 +207,42 @@ export function Toolbar({
         className={`icon-btn${tool === 'eraser' ? ' active-tool' : ''}`}
         onClick={() => onToolChange(tool === 'eraser' ? 'select' : 'eraser')}
         disabled={ghost}
-        title="Eraser: remove strokes from the top sheet"
+        title="Eraser: remove strokes from the active sheet"
       >
         <EraserIcon />
       </button>
+      <button
+        type="button"
+        className={`icon-btn${tool === 'text' ? ' active-tool' : ''}`}
+        onClick={() => onToolChange(tool === 'text' ? 'select' : 'text')}
+        disabled={ghost}
+        title="Text: click the active sheet to place a note"
+      >
+        <NoteIcon />
+      </button>
+      <button
+        type="button"
+        className={`icon-btn${tool === 'callout' ? ' active-tool' : ''}`}
+        onClick={() => onToolChange(tool === 'callout' ? 'select' : 'callout')}
+        disabled={ghost}
+        title="Callout: click the active sheet to place a bubble with an arrow"
+      >
+        <CalloutIcon />
+      </button>
+      {tool === 'callout' && (
+        <div className="pen-options">
+          {PEN_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={`color-dot${calloutColor === color ? ' active' : ''}`}
+              style={{ background: color }}
+              onClick={() => onCalloutColorChange(color)}
+              title={`Callout color ${color}`}
+            />
+          ))}
+        </div>
+      )}
       <button
         type="button"
         className="icon-btn"
@@ -214,6 +261,34 @@ export function Toolbar({
       >
         <RedoIcon />
       </button>
+
+      <div className="toolbar-sep" />
+
+      {/* Sheet navigation: which sheet in the stack new strokes/notes/imports land
+          on. Not to be confused with the (disabled) PDF page-controller below. */}
+      <div className="sheet-controller" title="Move between sheets (Alt+Up/Down, PageUp/PageDown)">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={onPrevSheet}
+          disabled={ghost || sheetIndex === 0}
+          title="Previous sheet (Alt+Up / PageUp)"
+        >
+          <ChevronUpIcon />
+        </button>
+        <span className="sheet-label">
+          Sheet {sheetIndex + 1}/{sheetCount}
+        </span>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={onNextSheet}
+          disabled={ghost || sheetIndex === sheetCount - 1}
+          title="Next sheet (Alt+Down / PageDown)"
+        >
+          <ChevronDownIcon />
+        </button>
+      </div>
 
       <div className="toolbar-sep" />
 
@@ -358,6 +433,10 @@ export function Toolbar({
               <div>
                 <span>Undo / Redo</span>
                 <span>Ctrl+Z / Ctrl+Y</span>
+              </div>
+              <div>
+                <span>Prev / Next sheet</span>
+                <span>Alt+↑/↓, PgUp/PgDn</span>
               </div>
               <div>
                 <span>Ghost Mode</span>

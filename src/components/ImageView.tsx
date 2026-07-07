@@ -11,7 +11,7 @@ interface ImageViewProps {
   img: ImageItem;
   selected: boolean;
   ghost: boolean;
-  onSelect: (id: string | null) => void;
+  onSelect: (id: string) => void;
   onChange: (id: string, patch: Partial<ImageItem>) => void;
   /** Called once at the start of a drag or wheel gesture (undo snapshot). */
   onGestureStart: () => void;

@@ -53,15 +53,21 @@ npm run typecheck  # type-check only
 | Toggle Ghost/Edit Mode | Toolbar **Ghost** button, or **Ctrl+Alt+G** (global) |
 | Move window | Drag the top strip or the toolbar grip (⠿) |
 | New sheet of paper | Toolbar **New Paper** |
-| Import image | Toolbar **Import** (PNG/JPG) |
-| Snapshot screen under overlay | Toolbar **camera** button (lands 1:1 on the top sheet) |
-| Draw / erase on top sheet | Toolbar **Pen** / **Erase** |
+| Previous / next sheet | Toolbar ⌃/⌄ **Sheet i/N** control, or **Alt+↑/↓** / **PageUp/PageDown** |
+| Import image | Toolbar **Import** (PNG/JPG), lands on the active sheet |
+| Snapshot screen under overlay | Toolbar **camera** button (lands 1:1 on the active sheet) |
+| Draw / erase on the active sheet | Toolbar **Pen** / **Erase** |
+| Add a text note | Toolbar **Note** tool, click the active sheet to place it |
+| Add a callout (bubble + arrow) | Toolbar **Callout** tool, click the active sheet to place it |
+| Move a note/callout | Drag its grip (⠿) |
+| Edit note/callout text | Click its text and type |
+| Re-aim a callout's arrow | Select it, drag the small target handle |
 | Undo / redo | **Ctrl+Z** / **Ctrl+Y**, or toolbar ↶ ↷ |
 | Move image | Drag it |
 | Image opacity | **Img** slider (appears when an image is selected) |
 | Scale image | Mouse wheel over it |
 | Rotate image | Shift + mouse wheel over it |
-| Delete image | Select it, press **Delete** |
+| Delete selected image/note/callout | Select it, press **Delete** |
 | Deselect | **Escape** or click the paper |
 | Opacity | Toolbar slider |
 | Save / load project | Toolbar **Save** / **Load** (`.tracelayer.json`) |
@@ -69,7 +75,7 @@ npm run typecheck  # type-check only
 
 ## Project files
 
-Projects are plain JSON (`*.tracelayer.json`) containing the paper stack, imported images (embedded as data URLs), and opacity. See [ARCHITECTURE.md](ARCHITECTURE.md) for the format.
+Projects are plain JSON (`*.tracelayer.json`) containing the paper stack (with each sheet's strokes, text notes, and callouts), imported images (embedded as data URLs), and opacity. See [ARCHITECTURE.md](ARCHITECTURE.md) for the format.
 
 ## Documentation
 
