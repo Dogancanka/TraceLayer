@@ -2,9 +2,19 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (UX/bugfix pass)
+**Last updated:** 2026-07-07 (pen rendering fix + pen options + corner ruler)
 
 ## Current state
+
+**Pen bug found and fixed for real this time.** Strokes were committed to the DOM but never painted: `.stroke-layer` was a zero-size (`width:0;height:0`) svg relying on `overflow: visible`, and **Chromium does not paint the content of a zero-size svg at all**. Earlier "pen works" verification only counted DOM paths — lesson: verify pixels (screenshots), not DOM. Strokes now render in a full-size svg with a centered `<g transform>` (window size via `src/useWindowSize.ts`). Verified visually via CDP screenshots: grey and red strokes visible on the sheet.
+
+Also added in this pass:
+
+- **Pen color + width**: 4 color dots and 3 width buttons appear in the toolbar while the pen tool is active. Per-stroke `color`/`width` persist in project files (older files normalize to graphite/2px). Note: per-stroke SVG attributes are used — do not reintroduce `stroke`/`stroke-width` in `.stroke-layer path` CSS, it would override them.
+- **Corner ruler** (`src/components/Ruler.tsx`): minimal rulers along the paper's top and left edges, responsive to window resize. Uncalibrated → CSS px ticks with a "px" corner badge. With a scale preset (e.g. 1:100) → real-world labels ("2 m, 4 m, …") computed from CSS reference DPI (96/25.4 px per mm), corner badge "≈1:100" — approximate until measured calibration exists. Ruler constants must stay in sync with `.paper-sheet` inset (18px margins, 64px bottom).
+- **Click-through failsafe**: main re-asserts `setIgnoreMouseEvents` on window focus/restore/show, so Edit Mode can never stay stuck ignoring the mouse after a race.
+
+Earlier state:
 
 MVP 0.1 + toolbar polish + most of roadmap 0.2 + a UX/bugfix pass. `npm run typecheck` and `npm run build` pass; app launches.
 
@@ -37,8 +47,8 @@ Earlier changes:
 ## What does not work yet / unverified
 
 - **Ghost Mode click-through has NOT been manually verified over real apps.** The implementation is the standard Electron pattern, but nobody has clicked through onto Notepad/browser/CAD yet. This is the first thing to verify (TASKS.md).
-- Scale UI is a label placeholder only — no measurement, no calibration flow.
-- Eraser verified in code review only; pen/undo verified via CDP input simulation, not a human workflow.
+- Scale UI sets labels and drives the ruler, but real measured calibration (pick two points, enter distance → `pixelsPerUnit`) does not exist yet; ruler lengths are approximate (assume 96 dpi CSS px).
+- Eraser verified in code review only; pen verified visually via CDP screenshots.
 - Edge-resizing a transparent frameless window on Windows is historically finicky in Electron; unverified.
 - Paper rotation (0.2 item): not implemented — needs pointer-coordinate mapping design so drawing works on a rotated stage.
 - Pen pressure: not implemented (optional 0.2 item).

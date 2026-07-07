@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { LayerStack } from './components/LayerStack';
 import { DrawingSurface } from './components/DrawingSurface';
-import { nextId, normalizeProject, uncalibratedScale } from './types';
+import { Ruler } from './components/Ruler';
+import { DEFAULT_STROKE_COLOR, DEFAULT_STROKE_WIDTH, nextId, normalizeProject, uncalibratedScale } from './types';
 import type { ImageItem, PaperSheet, ProjectFile, ScaleCalibration, Stroke, Tool } from './types';
 
 const randomTilt = () => (Math.random() - 0.5) * 1.6;
@@ -24,6 +25,8 @@ export default function App() {
   const [opacity, setOpacity] = useState(0.85);
   const [tool, setTool] = useState<Tool>('select');
   const [scale, setScale] = useState<ScaleCalibration>(uncalibratedScale);
+  const [penColor, setPenColor] = useState(DEFAULT_STROKE_COLOR);
+  const [penWidth, setPenWidth] = useState(DEFAULT_STROKE_WIDTH);
 
   // ---- Undo/redo ----
   // History lives in refs (no re-render per snapshot); historyVersion bumps
@@ -178,11 +181,11 @@ export default function App() {
       pushHistory();
       setPapers((prev) => {
         const top = prev[prev.length - 1];
-        const stroke: Stroke = { id: nextId(), points };
+        const stroke: Stroke = { id: nextId(), points, color: penColor, width: penWidth };
         return [...prev.slice(0, -1), { ...top, strokes: [...top.strokes, stroke] }];
       });
     },
-    [pushHistory],
+    [pushHistory, penColor, penWidth],
   );
 
   // One undo step per erase gesture, and only if it actually removed something.
@@ -244,6 +247,7 @@ export default function App() {
         style={{ opacity }}
         onPointerDown={() => setSelectedId(null)}
       >
+        <Ruler scale={scale} />
         <LayerStack
           papers={papers}
           images={images}
@@ -257,6 +261,8 @@ export default function App() {
           <DrawingSurface
             tool={tool}
             topStrokes={papers[papers.length - 1].strokes}
+            penColor={penColor}
+            penWidth={penWidth}
             onStrokeEnd={addStroke}
             onEraseGestureStart={beginEraseGesture}
             onErase={eraseStroke}
@@ -272,6 +278,10 @@ export default function App() {
         selectedImageOpacity={selectedImage?.opacity ?? null}
         scale={scale}
         onScaleChange={setScale}
+        penColor={penColor}
+        penWidth={penWidth}
+        onPenColorChange={setPenColor}
+        onPenWidthChange={setPenWidth}
         onNewProject={newProject}
         onToolChange={changeTool}
         onUndo={undo}

@@ -44,6 +44,13 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Scale/målestok UI placeholder (Uncalibrated label, 1:50/1:100/1:200 presets, disabled Calibrate…) + `ScaleCalibration` data model in project files
 - [ ] Real scale calibration flow (pick two points, enter distance → pixelsPerUnit) — later, see ROADMAP
 
+## Pen rendering fix + ruler (2026-07-07)
+
+- [x] Fix invisible strokes: zero-size svg is never painted by Chromium; use full-size svg + centered `<g transform>` (verify pixels, not DOM!)
+- [x] Pen color (4 presets) + width (1/2/4 px), per-stroke, persisted in project files
+- [x] Responsive corner ruler (top + left) with px ticks, or approximate real-world units when a scale preset is set
+- [x] Click-through failsafe: re-assert ignoreMouseEvents on focus/restore/show
+
 ## Milestone 0.1.x — hardening (only after manual verification)
 
 - [ ] Error toasts instead of `alert()` for load failures

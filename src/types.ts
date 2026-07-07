@@ -1,10 +1,17 @@
 /** Active interaction tool. 'select' = move/scale/rotate images. */
 export type Tool = 'select' | 'pen' | 'eraser';
 
+export const DEFAULT_STROKE_COLOR = '#3a3630';
+export const DEFAULT_STROKE_WIDTH = 2;
+
 /** One pen stroke. Flat [x0, y0, x1, y1, …] list, window-center-relative px. */
 export interface Stroke {
   id: string;
   points: number[];
+  /** CSS color. */
+  color: string;
+  /** Stroke width in px. */
+  width: number;
 }
 
 /** One sheet of tracing paper in the stack. */
@@ -96,7 +103,14 @@ export const nextId = (): string =>
 export function normalizeProject(project: ProjectFile): ProjectFile {
   const rawPapers =
     project.papers.length > 0 ? project.papers : [{ id: nextId(), tilt: 0, strokes: [] }];
-  const papers = rawPapers.map((paper) => ({ ...paper, strokes: paper.strokes ?? [] }));
+  const papers = rawPapers.map((paper) => ({
+    ...paper,
+    strokes: (paper.strokes ?? []).map((stroke) => ({
+      ...stroke,
+      color: stroke.color ?? DEFAULT_STROKE_COLOR,
+      width: stroke.width ?? DEFAULT_STROKE_WIDTH,
+    })),
+  }));
   const topPaperId = papers[papers.length - 1].id;
   return {
     ...project,

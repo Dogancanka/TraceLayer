@@ -91,6 +91,16 @@ function createWindow(): void {
     void win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
+  // Failsafe: re-assert the click-through state whenever the window gains
+  // focus or is restored, so a missed/raced setIgnoreMouseEvents call can
+  // never leave Edit Mode stuck ignoring the mouse.
+  const reassertMouseState = () => {
+    win?.setIgnoreMouseEvents(ghostMode, { forward: true });
+  };
+  win.on('focus', reassertMouseState);
+  win.on('restore', reassertMouseState);
+  win.on('show', reassertMouseState);
+
   win.on('close', saveWindowState);
   win.on('closed', () => {
     win = null;

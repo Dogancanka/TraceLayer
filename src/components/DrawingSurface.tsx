@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { strokeHit, strokePath } from '../stroke';
+import { useWindowSize } from '../useWindowSize';
 import type { Stroke, Tool } from '../types';
 
 const ERASE_RADIUS = 6;
@@ -10,6 +11,8 @@ interface DrawingSurfaceProps {
   tool: Exclude<Tool, 'select'>;
   /** Strokes of the top sheet — the only sheet the eraser can reach. */
   topStrokes: Stroke[];
+  penColor: string;
+  penWidth: number;
   onStrokeEnd: (points: number[]) => void;
   onEraseGestureStart: () => void;
   onErase: (strokeId: string) => void;
@@ -23,12 +26,15 @@ interface DrawingSurfaceProps {
 export function DrawingSurface({
   tool,
   topStrokes,
+  penColor,
+  penWidth,
   onStrokeEnd,
   onEraseGestureStart,
   onErase,
 }: DrawingSurfaceProps) {
   const [livePoints, setLivePoints] = useState<number[] | null>(null);
   const activeRef = useRef(false);
+  const { w, h } = useWindowSize();
 
   // Stroke coordinates are window-center-relative, same as image transforms.
   const toCenter = (e: ReactPointerEvent): [number, number] => [
@@ -88,7 +94,9 @@ export function DrawingSurface({
     >
       {livePoints && (
         <svg className="stroke-layer">
-          <path d={strokePath(livePoints)} />
+          <g transform={`translate(${w / 2} ${h / 2})`}>
+            <path d={strokePath(livePoints)} stroke={penColor} strokeWidth={penWidth} />
+          </g>
         </svg>
       )}
     </div>

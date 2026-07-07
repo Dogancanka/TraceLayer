@@ -3,6 +3,8 @@ import { uncalibratedScale } from '../types';
 import type { ScaleCalibration, Tool } from '../types';
 
 const SCALE_PRESETS = ['1:50', '1:100', '1:200'];
+const PEN_COLORS = ['#3a3630', '#c0392b', '#2762c4', '#1e8a4c'];
+const PEN_WIDTHS = [1, 2, 4];
 
 interface ToolbarProps {
   ghost: boolean;
@@ -14,6 +16,10 @@ interface ToolbarProps {
   selectedImageOpacity: number | null;
   scale: ScaleCalibration;
   onScaleChange: (scale: ScaleCalibration) => void;
+  penColor: string;
+  penWidth: number;
+  onPenColorChange: (color: string) => void;
+  onPenWidthChange: (width: number) => void;
   onNewProject: () => void;
   onToolChange: (tool: Tool) => void;
   onUndo: () => void;
@@ -39,6 +45,10 @@ export function Toolbar({
   selectedImageOpacity,
   scale,
   onScaleChange,
+  penColor,
+  penWidth,
+  onPenColorChange,
+  onPenWidthChange,
   onNewProject,
   onToolChange,
   onUndo,
@@ -109,6 +119,32 @@ export function Toolbar({
       >
         Pen
       </button>
+      {tool === 'pen' && (
+        <div className="pen-options">
+          {PEN_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={`color-dot${penColor === color ? ' active' : ''}`}
+              style={{ background: color }}
+              onClick={() => onPenColorChange(color)}
+              title={`Pen color ${color}`}
+            />
+          ))}
+          {PEN_WIDTHS.map((width) => (
+            <button
+              key={width}
+              type="button"
+              className={`width-dot${penWidth === width ? ' active' : ''}`}
+              onClick={() => onPenWidthChange(width)}
+              title={`Pen width ${width} px`}
+            >
+              <span style={{ width: width + 2, height: width + 2 }} />
+            </button>
+          ))}
+        </div>
+      )}
+
       <button
         type="button"
         className={tool === 'eraser' ? 'active-tool' : ''}

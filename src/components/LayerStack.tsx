@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import type { CSSProperties } from 'react';
 import { ImageView } from './ImageView';
 import { strokePath } from '../stroke';
+import { useWindowSize } from '../useWindowSize';
 import type { ImageItem, PaperSheet } from '../types';
 
 interface LayerStackProps {
@@ -33,6 +34,10 @@ export function LayerStack({
   onChange,
   onGestureStart,
 }: LayerStackProps) {
+  // Stroke coordinates are window-center-relative; the <g> translate maps
+  // them into the full-size svg. (A zero-size svg with overflow:visible is
+  // NOT painted by Chromium — do not "simplify" back to that.)
+  const { w, h } = useWindowSize();
   return (
     <div className="layer-stack">
       {papers.map((paper) => (
@@ -56,9 +61,16 @@ export function LayerStack({
             ))}
           {paper.strokes.length > 0 && (
             <svg className="stroke-layer">
-              {paper.strokes.map((stroke) => (
-                <path key={stroke.id} d={strokePath(stroke.points)} />
-              ))}
+              <g transform={`translate(${w / 2} ${h / 2})`}>
+                {paper.strokes.map((stroke) => (
+                  <path
+                    key={stroke.id}
+                    d={strokePath(stroke.points)}
+                    stroke={stroke.color}
+                    strokeWidth={stroke.width}
+                  />
+                ))}
+              </g>
             </svg>
           )}
         </Fragment>
