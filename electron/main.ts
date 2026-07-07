@@ -1,9 +1,42 @@
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain } from 'electron';
+import * as fsSync from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 let win: BrowserWindow | null = null;
 let ghostMode = false;
+
+// ---- Window position/size persistence (local file, no cloud) ----
+
+interface WindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+}
+
+const windowStateFile = (): string => path.join(app.getPath('userData'), 'window-state.json');
+
+function loadWindowState(): WindowState | null {
+  try {
+    const raw = JSON.parse(fsSync.readFileSync(windowStateFile(), 'utf-8')) as WindowState;
+    if (typeof raw.width === 'number' && typeof raw.height === 'number' && raw.width >= 360 && raw.height >= 280) {
+      return raw;
+    }
+  } catch {
+    // first run or unreadable state file — fall back to defaults
+  }
+  return null;
+}
+
+function saveWindowState(): void {
+  if (!win || win.isMinimized()) return;
+  try {
+    fsSync.writeFileSync(windowStateFile(), JSON.stringify(win.getBounds()), 'utf-8');
+  } catch {
+    // non-fatal: next launch just uses defaults
+  }
+}
 
 const MIME_BY_EXT: Record<string, string> = {
   '.png': 'image/png',
@@ -27,9 +60,12 @@ function applyGhostMode(ghost: boolean): void {
 }
 
 function createWindow(): void {
+  const saved = loadWindowState();
   win = new BrowserWindow({
-    width: 960,
-    height: 720,
+    width: saved?.width ?? 960,
+    height: saved?.height ?? 720,
+    x: saved?.x,
+    y: saved?.y,
     minWidth: 360,
     minHeight: 280,
     transparent: true,
@@ -55,6 +91,7 @@ function createWindow(): void {
     void win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
+  win.on('close', saveWindowState);
   win.on('closed', () => {
     win = null;
   });

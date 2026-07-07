@@ -6,13 +6,13 @@ Direction only — nothing here is committed work. **Do not implement roadmap it
 
 Transparent always-on-top paper window, Ghost Mode click-through, image tracing basics, local save/load. See MVP_SCOPE.md.
 
-## 0.2 — Make tracing pleasant
+## 0.2 — Make tracing pleasant (in progress)
 
-- Pen/pencil drawing on the paper (pressure optional), eraser
-- Undo/redo
-- Paper rotation (rotate the paper *content*, not the OS window)
-- Image opacity per layer (separate from global paper opacity)
-- Window position/size persistence
+- [x] Pen drawing on the paper, eraser (pressure not implemented — optional, still open)
+- [x] Undo/redo
+- [ ] Paper rotation (rotate the paper *content*, not the OS window)
+- [x] Image opacity per layer (separate from global paper opacity)
+- [x] Window position/size persistence
 
 ## 0.3 — Reference workflows
 

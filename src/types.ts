@@ -1,8 +1,19 @@
+/** Active interaction tool. 'select' = move/scale/rotate images. */
+export type Tool = 'select' | 'pen' | 'eraser';
+
+/** One pen stroke. Flat [x0, y0, x1, y1, …] list, window-center-relative px. */
+export interface Stroke {
+  id: string;
+  points: number[];
+}
+
 /** One sheet of tracing paper in the stack. */
 export interface PaperSheet {
   id: string;
   /** Small random rotation (degrees) so stacked sheets read as physical paper. */
   tilt: number;
+  /** Pen strokes drawn on this sheet. */
+  strokes: Stroke[];
 }
 
 /** An imported PNG/JPG with its transform, relative to the window center. */
@@ -14,6 +25,8 @@ export interface ImageItem {
   scale: number;
   /** Degrees. */
   rotation: number;
+  /** Per-image opacity, 0.05–1 (multiplies with the global paper opacity). */
+  opacity: number;
   /**
    * The sheet this image sits on. Sheets and their images render
    * interleaved, so a newer sheet covers older sheets' images.
@@ -54,13 +67,16 @@ export const nextId = (): string =>
  * top sheet, where they remain interactive.
  */
 export function normalizeProject(project: ProjectFile): ProjectFile {
-  const papers = project.papers.length > 0 ? project.papers : [{ id: nextId(), tilt: 0 }];
+  const rawPapers =
+    project.papers.length > 0 ? project.papers : [{ id: nextId(), tilt: 0, strokes: [] }];
+  const papers = rawPapers.map((paper) => ({ ...paper, strokes: paper.strokes ?? [] }));
   const topPaperId = papers[papers.length - 1].id;
   return {
     ...project,
     papers,
     images: project.images.map((img) => ({
       ...img,
+      opacity: img.opacity ?? 1,
       paperId: img.paperId ?? topPaperId,
     })),
   };

@@ -1,20 +1,69 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { LayerStack } from './components/LayerStack';
+import { DrawingSurface } from './components/DrawingSurface';
 import { nextId, normalizeProject } from './types';
-import type { ImageItem, PaperSheet, ProjectFile } from './types';
+import type { ImageItem, PaperSheet, ProjectFile, Stroke, Tool } from './types';
 
 const randomTilt = () => (Math.random() - 0.5) * 1.6;
+const newSheet = (tilt = 0): PaperSheet => ({ id: nextId(), tilt, strokes: [] });
+
+/** Everything undo/redo covers. Image data URLs are shared by reference, so snapshots are cheap. */
+interface DocSnapshot {
+  papers: PaperSheet[];
+  images: ImageItem[];
+}
+
+const HISTORY_LIMIT = 50;
 
 export default function App() {
   const [ghost, setGhost] = useState(false);
-  const [papers, setPapers] = useState<PaperSheet[]>([{ id: nextId(), tilt: 0 }]);
+  const [papers, setPapers] = useState<PaperSheet[]>(() => [newSheet()]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [opacity, setOpacity] = useState(0.85);
+  const [tool, setTool] = useState<Tool>('select');
 
-  // Main process owns Ghost Mode state (toolbar and global shortcut both
-  // route through it); the renderer just mirrors it.
+  // ---- Undo/redo ----
+  // History lives in refs (no re-render per snapshot); historyVersion bumps
+  // so canUndo/canRedo in the toolbar stay current.
+  const pastRef = useRef<DocSnapshot[]>([]);
+  const futureRef = useRef<DocSnapshot[]>([]);
+  const docRef = useRef<DocSnapshot>({ papers, images });
+  docRef.current = { papers, images };
+  const [, setHistoryVersion] = useState(0);
+  const bumpHistory = () => setHistoryVersion((v) => v + 1);
+
+  const pushHistory = useCallback(() => {
+    pastRef.current.push(docRef.current);
+    if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift();
+    futureRef.current = [];
+    bumpHistory();
+  }, []);
+
+  const applySnapshot = (snap: DocSnapshot) => {
+    setPapers(snap.papers);
+    setImages(snap.images);
+    setSelectedId(null);
+  };
+
+  const undo = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push(docRef.current);
+    applySnapshot(prev);
+    bumpHistory();
+  }, []);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current.push(docRef.current);
+    applySnapshot(next);
+    bumpHistory();
+  }, []);
+
+  // ---- Ghost Mode (owned by the main process; renderer mirrors it) ----
   useEffect(() => window.traceLayer.onGhostModeChanged(setGhost), []);
 
   // In Ghost Mode the window is click-through, which would make the toolbar
@@ -38,31 +87,55 @@ export default function App() {
     };
   }, [ghost]);
 
-  // Delete removes the selected image; Escape deselects.
+  // ---- Keyboard ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedId(null);
+      if (ghost) return;
+      const key = e.key.toLowerCase();
+      if (e.ctrlKey && key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (e.ctrlKey && (key === 'y' || (key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      if (e.key === 'Escape') {
+        setSelectedId(null);
+        setTool('select');
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        pushHistory();
         setImages((prev) => prev.filter((img) => img.id !== selectedId));
         setSelectedId(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId]);
+  }, [ghost, selectedId, undo, redo, pushHistory]);
 
+  // ---- Actions ----
   const toggleGhost = useCallback(() => {
     void window.traceLayer.setGhostMode(!ghost);
   }, [ghost]);
 
-  const addPaper = useCallback(() => {
-    setPapers((prev) => [...prev, { id: nextId(), tilt: randomTilt() }]);
-    setSelectedId(null); // whatever was selected is now under the new sheet
+  const changeTool = useCallback((next: Tool) => {
+    setTool(next);
+    if (next !== 'select') setSelectedId(null);
   }, []);
+
+  const addPaper = useCallback(() => {
+    pushHistory();
+    setPapers((prev) => [...prev, newSheet(randomTilt())]);
+    setSelectedId(null); // whatever was selected is now under the new sheet
+  }, [pushHistory]);
 
   const importImage = useCallback(async () => {
     const dataUrl = await window.traceLayer.importImage();
     if (!dataUrl) return;
+    pushHistory();
     const img: ImageItem = {
       id: nextId(),
       dataUrl,
@@ -70,15 +143,53 @@ export default function App() {
       y: 0,
       scale: 1,
       rotation: 0,
+      opacity: 1,
       paperId: papers[papers.length - 1].id, // imports land on the top sheet
     };
     setImages((prev) => [...prev, img]);
     setSelectedId(img.id);
-  }, [papers]);
+    setTool('select');
+  }, [papers, pushHistory]);
 
+  // Live updates during a gesture; the undo snapshot is taken once at
+  // gesture start (ImageView calls onGestureStart / pushHistory).
   const updateImage = useCallback((id: string, patch: Partial<ImageItem>) => {
     setImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...patch } : img)));
   }, []);
+
+  const addStroke = useCallback(
+    (points: number[]) => {
+      pushHistory();
+      setPapers((prev) => {
+        const top = prev[prev.length - 1];
+        const stroke: Stroke = { id: nextId(), points };
+        return [...prev.slice(0, -1), { ...top, strokes: [...top.strokes, stroke] }];
+      });
+    },
+    [pushHistory],
+  );
+
+  // One undo step per erase gesture, and only if it actually removed something.
+  const erasePendingRef = useRef(false);
+  const beginEraseGesture = useCallback(() => {
+    erasePendingRef.current = true;
+  }, []);
+  const eraseStroke = useCallback(
+    (strokeId: string) => {
+      if (erasePendingRef.current) {
+        pushHistory();
+        erasePendingRef.current = false;
+      }
+      setPapers((prev) =>
+        prev.map((paper) =>
+          paper.strokes.some((s) => s.id === strokeId)
+            ? { ...paper, strokes: paper.strokes.filter((s) => s.id !== strokeId) }
+            : paper,
+        ),
+      );
+    },
+    [pushHistory],
+  );
 
   const saveProject = useCallback(async () => {
     const project: ProjectFile = { version: 1, opacity, papers, images };
@@ -93,22 +204,26 @@ export default function App() {
       if (parsed.version !== 1 || !Array.isArray(parsed.papers) || !Array.isArray(parsed.images)) {
         throw new Error('Not a TraceLayer v1 project');
       }
+      pushHistory();
       const project = normalizeProject(parsed);
       setPapers(project.papers);
       setImages(project.images);
       setOpacity(typeof project.opacity === 'number' ? project.opacity : 0.85);
       setSelectedId(null);
+      setTool('select');
     } catch (err) {
       // eslint-disable-next-line no-alert
       alert(`Could not load project: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, []);
+  }, [pushHistory]);
+
+  const selectedImage = images.find((img) => img.id === selectedId) ?? null;
 
   return (
     <>
       <div className="drag-handle" title="Drag to move window" />
       <div
-        className={`stage${ghost ? ' ghost' : ''}`}
+        className={`stage${ghost ? ' ghost' : ''}${tool !== 'select' ? ' drawing' : ''}`}
         style={{ opacity }}
         onPointerDown={() => setSelectedId(null)}
       >
@@ -119,15 +234,36 @@ export default function App() {
           ghost={ghost}
           onSelect={setSelectedId}
           onChange={updateImage}
+          onGestureStart={pushHistory}
         />
+        {!ghost && tool !== 'select' && (
+          <DrawingSurface
+            tool={tool}
+            topStrokes={papers[papers.length - 1].strokes}
+            onStrokeEnd={addStroke}
+            onEraseGestureStart={beginEraseGesture}
+            onErase={eraseStroke}
+          />
+        )}
       </div>
       <Toolbar
         ghost={ghost}
         opacity={opacity}
+        tool={tool}
+        canUndo={pastRef.current.length > 0}
+        canRedo={futureRef.current.length > 0}
+        selectedImageOpacity={selectedImage?.opacity ?? null}
+        onToolChange={changeTool}
+        onUndo={undo}
+        onRedo={redo}
         onToggleGhost={toggleGhost}
         onNewPaper={addPaper}
         onImport={() => void importImage()}
         onOpacityChange={setOpacity}
+        onImageOpacityChange={(value) => {
+          if (selectedId) updateImage(selectedId, { opacity: value });
+        }}
+        onImageGestureStart={pushHistory}
         onSave={() => void saveProject()}
         onLoad={() => void loadProject()}
         onHide={() => window.traceLayer.hideWindow()}

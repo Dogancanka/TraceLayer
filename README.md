@@ -54,7 +54,10 @@ npm run typecheck  # type-check only
 | Move window | Drag the top strip or the toolbar grip (⠿) |
 | New sheet of paper | Toolbar **New Paper** |
 | Import image | Toolbar **Import** (PNG/JPG) |
+| Draw / erase on top sheet | Toolbar **Pen** / **Erase** |
+| Undo / redo | **Ctrl+Z** / **Ctrl+Y**, or toolbar ↶ ↷ |
 | Move image | Drag it |
+| Image opacity | **Img** slider (appears when an image is selected) |
 | Scale image | Mouse wheel over it |
 | Rotate image | Shift + mouse wheel over it |
 | Delete image | Select it, press **Delete** |

@@ -4,6 +4,8 @@ import type { ImageItem } from '../types';
 
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 20;
+/** Wheel events further apart than this start a new undo step. */
+const WHEEL_GESTURE_GAP_MS = 400;
 
 interface ImageViewProps {
   img: ImageItem;
@@ -11,15 +13,19 @@ interface ImageViewProps {
   ghost: boolean;
   onSelect: (id: string | null) => void;
   onChange: (id: string, patch: Partial<ImageItem>) => void;
+  /** Called once at the start of a drag or wheel gesture (undo snapshot). */
+  onGestureStart: () => void;
 }
 
-export function ImageView({ img, selected, ghost, onSelect, onChange }: ImageViewProps) {
+export function ImageView({ img, selected, ghost, onSelect, onChange, onGestureStart }: ImageViewProps) {
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const lastWheelRef = useRef(0);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (ghost || e.button !== 0) return;
     e.stopPropagation(); // keep the stage from deselecting
     onSelect(img.id);
+    onGestureStart();
     dragRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -49,6 +55,9 @@ export function ImageView({ img, selected, ghost, onSelect, onChange }: ImageVie
   const onWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
     if (ghost) return;
     onSelect(img.id);
+    const now = Date.now();
+    if (now - lastWheelRef.current > WHEEL_GESTURE_GAP_MS) onGestureStart();
+    lastWheelRef.current = now;
     const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX;
     if (e.shiftKey) {
       onChange(img.id, { rotation: img.rotation + (delta > 0 ? 3 : -3) });
@@ -64,6 +73,7 @@ export function ImageView({ img, selected, ghost, onSelect, onChange }: ImageVie
       className={`image-item${selected ? ' selected' : ''}`}
       style={{
         transform: `translate(-50%, -50%) translate(${img.x}px, ${img.y}px) rotate(${img.rotation}deg) scale(${img.scale})`,
+        opacity: img.opacity,
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

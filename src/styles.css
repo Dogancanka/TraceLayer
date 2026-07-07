@@ -98,6 +98,46 @@ body,
   }
 }
 
+/* ---- Strokes (pen drawing) ---- */
+
+/* Centered zero-size svg with visible overflow: stroke coordinates are
+   window-center-relative, so no resize handling is needed. */
+.stroke-layer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.stroke-layer path {
+  fill: none;
+  stroke: #3a3630;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.drawing-surface {
+  position: absolute;
+  inset: 0;
+}
+
+.drawing-surface.pen {
+  cursor: crosshair;
+}
+
+.drawing-surface.eraser {
+  cursor: cell;
+}
+
+/* While a drawing tool is active, images must not swallow pointer events. */
+.stage.drawing .image-item {
+  pointer-events: none;
+}
+
 /* ---- Imported images ---- */
 
 .image-item {
@@ -189,8 +229,9 @@ body,
   min-width: 28px;
 }
 
-.toolbar .settings-btn.active {
-  background: rgba(74, 66, 52, 0.2);
+.toolbar .settings-btn.active,
+.toolbar .active-tool {
+  background: rgba(74, 66, 52, 0.22);
 }
 
 .toolbar-sep {

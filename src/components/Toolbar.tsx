@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
+import type { Tool } from '../types';
 
 interface ToolbarProps {
   ghost: boolean;
   opacity: number;
+  tool: Tool;
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Opacity of the selected image, or null when nothing is selected. */
+  selectedImageOpacity: number | null;
+  onToolChange: (tool: Tool) => void;
+  onUndo: () => void;
+  onRedo: () => void;
   onToggleGhost: () => void;
   onNewPaper: () => void;
   onImport: () => void;
   onOpacityChange: (value: number) => void;
+  onImageOpacityChange: (value: number) => void;
+  onImageGestureStart: () => void;
   onSave: () => void;
   onLoad: () => void;
   onHide: () => void;
@@ -16,10 +27,19 @@ interface ToolbarProps {
 export function Toolbar({
   ghost,
   opacity,
+  tool,
+  canUndo,
+  canRedo,
+  selectedImageOpacity,
+  onToolChange,
+  onUndo,
+  onRedo,
   onToggleGhost,
   onNewPaper,
   onImport,
   onOpacityChange,
+  onImageOpacityChange,
+  onImageGestureStart,
   onSave,
   onLoad,
   onHide,
@@ -64,6 +84,43 @@ export function Toolbar({
         Import
       </button>
 
+      <button
+        type="button"
+        className={tool === 'pen' ? 'active-tool' : ''}
+        onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
+        disabled={ghost}
+        title="Pen: draw on the top sheet"
+      >
+        Pen
+      </button>
+      <button
+        type="button"
+        className={tool === 'eraser' ? 'active-tool' : ''}
+        onClick={() => onToolChange(tool === 'eraser' ? 'select' : 'eraser')}
+        disabled={ghost}
+        title="Eraser: remove strokes from the top sheet"
+      >
+        Erase
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onUndo}
+        disabled={ghost || !canUndo}
+        title="Undo (Ctrl+Z)"
+      >
+        ↶
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onRedo}
+        disabled={ghost || !canRedo}
+        title="Redo (Ctrl+Y)"
+      >
+        ↷
+      </button>
+
       {/* Placeholder for future multi-page (PDF) support — see DocumentPages in types.ts. */}
       <div className="page-controller" title="Multi-page documents coming later">
         <button type="button" disabled title="Previous page">
@@ -95,6 +152,21 @@ export function Toolbar({
           disabled={ghost}
         />
       </label>
+
+      {selectedImageOpacity !== null && (
+        <label className="opacity-control" title="Selected image opacity">
+          <span>Img</span>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            value={Math.round(selectedImageOpacity * 100)}
+            onPointerDown={onImageGestureStart}
+            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
+            disabled={ghost}
+          />
+        </label>
+      )}
 
       <button type="button" onClick={onSave} disabled={ghost} title="Save project as JSON">
         Save
@@ -128,6 +200,10 @@ export function Toolbar({
               <div>
                 <span>Remove image</span>
                 <span>Delete</span>
+              </div>
+              <div>
+                <span>Undo / Redo</span>
+                <span>Ctrl+Z / Ctrl+Y</span>
               </div>
               <div>
                 <span>Ghost Mode</span>

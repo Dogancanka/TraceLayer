@@ -23,6 +23,17 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [ ] Manual verification pass on Windows: Ghost Mode click-through over real apps (Notepad, browser, CAD) — **do this first**; include collapsed-toolbar hover in Ghost Mode and Hide→restore
 - [ ] Verify frameless transparent window edge-resize behaves on Windows 11; add fallback (resize handles) if not
 
+## Milestone 0.2 — Make tracing pleasant
+
+- [x] Fix New Paper: sheets/images interleaved in z-order, translucent sheets (tracing-paper behavior)
+- [x] Pen drawing on the top sheet (smoothed strokes, committed on pointer-up)
+- [x] Eraser (removes whole strokes, top sheet only)
+- [x] Undo/redo (snapshot history, Ctrl+Z / Ctrl+Y, toolbar buttons)
+- [x] Per-image opacity (Img slider appears when an image is selected)
+- [x] Window position/size persistence (userData/window-state.json)
+- [ ] Paper rotation (rotate paper *content*, not the OS window) — needs pointer-coordinate mapping for drawing on a rotated stage; design before building
+- [ ] Manual verification: draw/erase/undo over a real workflow; strokes are not clipped to the sheet edge (known cosmetic issue)
+
 ## Milestone 0.1.x — hardening (only after manual verification)
 
 - [ ] Error toasts instead of `alert()` for load failures

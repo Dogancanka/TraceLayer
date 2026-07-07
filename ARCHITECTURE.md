@@ -48,29 +48,48 @@ The preload's `api` object type (`TraceLayerApi`) is imported type-only by `src/
 
 ## Renderer state
 
-Plain React state in `src/App.tsx` — no state library (deliberate; do not add one for MVP):
+Plain React state in `src/App.tsx` — no state library (deliberate; do not add one):
 
-- `papers: PaperSheet[]` — the stack; each sheet has a small random `tilt`. New sheets mount with the `paper-drop` CSS animation ("placed on top").
-- `images: ImageItem[]` — imported images with `x/y/scale/rotation`, positioned relative to window center. Drag = move, wheel = scale, Shift+wheel = rotate, Delete = remove (see `src/components/ImageLayer.tsx`).
-- `opacity` — CSS opacity on the stage (papers + images); the toolbar is outside the stage so it stays readable.
+- `papers: PaperSheet[]` — the stack; each sheet has a small random `tilt` and its own `strokes`. New sheets mount with the `paper-drop` CSS animation ("placed on top").
+- `images: ImageItem[]` — imported images with `x/y/scale/rotation/opacity` and a `paperId`. Positioned relative to window center. Drag = move, wheel = scale, Shift+wheel = rotate, Delete = remove (see `src/components/ImageView.tsx`).
+- `opacity` — CSS opacity on the stage; the toolbar is outside the stage so it stays readable. Per-image opacity multiplies on top.
+- `tool` — `select | pen | eraser`. Pen/eraser mount `DrawingSurface`, a full-stage input layer; strokes commit to the **top** sheet on pointer-up, the eraser removes whole strokes it touches (top sheet only).
 - `ghost` — mirror of main-process state.
+
+**Layering:** `LayerStack` renders sheets and their contents interleaved: sheet → its images → its strokes, next sheet on top of all of that. Sheets are slightly translucent, so lower layers show through dimmed (real tracing-paper behavior). Images/strokes under a newer sheet are automatically non-interactive because the sheet div hit-tests above them.
+
+**Undo/redo:** snapshot stacks (`past`/`future`, max 50) of `{ papers, images }` held in refs. Snapshots are cheap — image data URLs are shared by reference. One snapshot per discrete action or gesture: add paper, import, delete, stroke end, erase gesture (only if it removed something), image drag start, wheel-gesture start (>400 ms gap = new gesture). Live drags mutate state without history. Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z).
+
+**Stroke geometry** (`src/stroke.ts`): flat `[x0, y0, x1, y1, …]` arrays, window-center-relative px. Rendered as SVG paths smoothed with quadratic midpoints, via a centered zero-size `overflow: visible` svg — no resize handling needed. Eraser hit-test is point-to-segment distance.
 
 ## Project file format
 
-`*.tracelayer.json`, versioned:
+`*.tracelayer.json`, versioned. Still `version: 1`; fields added since the first release (`strokes`, `opacity` on images, `paperId`, `pages`) are back-filled by `normalizeProject()` in `src/types.ts` when loading older files.
 
 ```json
 {
   "version": 1,
   "opacity": 0.85,
-  "papers": [{ "id": "…", "tilt": 0.4 }],
+  "papers": [
+    { "id": "…", "tilt": 0.4, "strokes": [{ "id": "…", "points": [0, 0, 10, 12] }] }
+  ],
   "images": [
-    { "id": "…", "dataUrl": "data:image/png;base64,…", "x": 0, "y": 0, "scale": 1, "rotation": 0 }
+    {
+      "id": "…",
+      "dataUrl": "data:image/png;base64,…",
+      "x": 0, "y": 0, "scale": 1, "rotation": 0,
+      "opacity": 1,
+      "paperId": "…"
+    }
   ]
 }
 ```
 
-Images are embedded as data URLs so a project file is fully self-contained. Fine for MVP; large images make large files (see HANDOFF.md known issues).
+Images are embedded as data URLs so a project file is fully self-contained. Fine for now; large images make large files (see HANDOFF.md known issues).
+
+## Window state persistence
+
+`electron/main.ts` saves window bounds to `window-state.json` in `app.getPath('userData')` on close and restores them on launch (with basic sanity checks). Local file only — no cloud.
 
 ## Build system
 

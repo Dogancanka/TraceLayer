@@ -2,19 +2,20 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (toolbar UI polish)
+**Last updated:** 2026-07-07 (New Paper fix + roadmap 0.2 features)
 
 ## Current state
 
-MVP 0.1 vertical slice + toolbar UI polish pass. `npm run typecheck` and `npm run build` pass.
+MVP 0.1 + toolbar polish + most of roadmap 0.2. `npm run typecheck` and `npm run build` pass; app launches.
 
-Latest change (UI polish only, no architecture changes):
+Latest changes:
 
-- Toolbar restyled to a warm beige paper-like theme (rounded, soft shadow, subtle border); stays bottom-centered and compact.
-- **Collapse**: ▾ button collapses the bar to a small "▲ TraceLayer" pill; clicking it restores the bar. The collapsed pill keeps the `.toolbar` class — the Ghost Mode hover check in `App.tsx` matches `.toolbar`, so the pill stays clickable in Ghost Mode and Ghost Mode remains exitable (plus Ctrl+Alt+G always works). Do not rename that class without updating the hover check.
-- **Settings popover** (⚙): shortcuts reference. Popover closes automatically when Ghost Mode starts. Opacity slider stays on the main bar (user preference — do not move it into settings). Primary bar: New Paper, Import, page controller, Ghost, Opacity, Save, Load, Settings, Collapse, Hide, ✕.
-- **Hide button** (–) beside ✕: minimizes the window via IPC `hide-window` → `win.minimize()`; restore from taskbar. Does not quit.
-- **Page controller placeholder**: disabled ‹ 1 / 1 › in the bar. Data model reserved as optional `pages?: DocumentPages` on `ProjectFile` (`src/types.ts`) — not populated, no version bump needed; future PDF pages should render to images and reuse the ImageItem pipeline.
+- **New Paper fixed.** It looked like a no-op: all images rendered above all sheets and sheets were opaque. Now sheets and their images/strokes render interleaved (`LayerStack`), sheets are slightly translucent, and images belong to a sheet (`ImageItem.paperId`). A new sheet visibly covers and dims everything below it; covered content becomes non-interactive naturally. Old project files still load (`normalizeProject()` back-fills missing fields).
+- **Pen + eraser** (0.2): draw on the top sheet with smoothed SVG strokes; eraser removes whole strokes it touches (top sheet only). `DrawingSurface` mounts only while a drawing tool is active in Edit Mode; Ghost Mode untouched.
+- **Undo/redo** (0.2): snapshot history (max 50) covering papers/images/strokes; Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z + toolbar ↶ ↷. One step per action/gesture (drag start, wheel-gesture start, stroke end, erase gesture).
+- **Per-image opacity** (0.2): "Img" slider appears in the toolbar when an image is selected.
+- **Window position/size persistence** (0.2): saved to `userData/window-state.json` on close, restored at launch.
+- Toolbar collapse pill still keeps the `.toolbar` class — the Ghost Mode hover check matches `.toolbar`; do not rename it. Opacity slider stays on the main bar (user preference — do not move into settings). Page controller ‹ 1/1 › remains a disabled placeholder (`pages?: DocumentPages` reserved in types).
 
 ## What works (implemented, typechecked, app launches)
 
@@ -28,12 +29,17 @@ Latest change (UI polish only, no architecture changes):
 ## What does not work yet / unverified
 
 - **Ghost Mode click-through has NOT been manually verified over real apps.** The implementation is the standard Electron pattern, but nobody has clicked through onto Notepad/browser/CAD yet. This is the first thing to verify (TASKS.md).
+- Drawing/eraser/undo not manually exercised in a real tracing workflow yet.
 - Edge-resizing a transparent frameless window on Windows is historically finicky in Electron; unverified.
-- Paper (window) rotation: not implemented, deliberately out of MVP scope.
+- Paper rotation (0.2 item): not implemented — needs pointer-coordinate mapping design so drawing works on a rotated stage.
+- Pen pressure: not implemented (optional 0.2 item).
 - No packaging/installer — runs via `npm run dev` / `npm run start` only.
 
 ## Known issues / sharp edges
 
+- Strokes are not clipped to the sheet edge — drawing can extend past the paper border (cosmetic).
+- Strokes/images are window-center-relative: resizing the window shifts content relative to the paper edges.
+- Loading a project replaces the current document (it does push an undo snapshot first).
 - Images are embedded in project JSON as base64 data URLs → large images make large project files.
 - Load failure shows a plain `alert()`.
 - Window position/size not persisted between launches.
