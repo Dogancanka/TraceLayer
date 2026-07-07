@@ -267,17 +267,18 @@ body,
   gap: 12px;
 }
 
-.settings-row {
+.opacity-control {
+  -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 12px;
-  color: #4a4234;
+  gap: 6px;
+  padding: 0 4px;
+  color: rgba(74, 66, 52, 0.8);
+  font-size: 11px;
 }
 
-.settings-row input[type='range'] {
-  width: 130px;
+.opacity-control input[type='range'] {
+  width: 90px;
   accent-color: #4a7dd6;
 }
 
@@ -287,8 +288,6 @@ body,
   gap: 4px;
   font-size: 11px;
   color: rgba(74, 66, 52, 0.75);
-  border-top: 1px solid rgba(160, 148, 122, 0.35);
-  padding-top: 10px;
 }
 
 .settings-hints-title {

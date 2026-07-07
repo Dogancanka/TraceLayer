@@ -12,7 +12,7 @@ Latest change (UI polish only, no architecture changes):
 
 - Toolbar restyled to a warm beige paper-like theme (rounded, soft shadow, subtle border); stays bottom-centered and compact.
 - **Collapse**: ▾ button collapses the bar to a small "▲ TraceLayer" pill; clicking it restores the bar. The collapsed pill keeps the `.toolbar` class — the Ghost Mode hover check in `App.tsx` matches `.toolbar`, so the pill stays clickable in Ghost Mode and Ghost Mode remains exitable (plus Ctrl+Alt+G always works). Do not rename that class without updating the hover check.
-- **Settings popover** (⚙): opacity slider moved here, plus a shortcuts reference. Popover closes automatically when Ghost Mode starts. Primary bar keeps: New Paper, Import, page controller, Ghost, Save, Load, Settings, Collapse, Hide, ✕.
+- **Settings popover** (⚙): shortcuts reference. Popover closes automatically when Ghost Mode starts. Opacity slider stays on the main bar (user preference — do not move it into settings). Primary bar: New Paper, Import, page controller, Ghost, Opacity, Save, Load, Settings, Collapse, Hide, ✕.
 - **Hide button** (–) beside ✕: minimizes the window via IPC `hide-window` → `win.minimize()`; restore from taskbar. Does not quit.
 - **Page controller placeholder**: disabled ‹ 1 / 1 › in the bar. Data model reserved as optional `pages?: DocumentPages` on `ProjectFile` (`src/types.ts`) — not populated, no version bump needed; future PDF pages should render to images and reuse the ImageItem pipeline.
 

@@ -84,6 +84,18 @@ export function Toolbar({
         {ghost ? 'Ghost ON' : 'Ghost'}
       </button>
 
+      <label className="opacity-control" title="Paper opacity">
+        <span>Opacity</span>
+        <input
+          type="range"
+          min={10}
+          max={100}
+          value={Math.round(opacity * 100)}
+          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
+          disabled={ghost}
+        />
+      </label>
+
       <button type="button" onClick={onSave} disabled={ghost} title="Save project as JSON">
         Save
       </button>
@@ -103,16 +115,6 @@ export function Toolbar({
         </button>
         {settingsOpen && (
           <div className="settings-popover">
-            <label className="settings-row" title="Paper opacity">
-              <span>Opacity</span>
-              <input
-                type="range"
-                min={10}
-                max={100}
-                value={Math.round(opacity * 100)}
-                onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
-              />
-            </label>
             <div className="settings-hints">
               <div className="settings-hints-title">Shortcuts</div>
               <div>
