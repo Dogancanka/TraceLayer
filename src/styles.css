@@ -156,7 +156,11 @@ body,
 
 /* ---- Corner ruler ---- */
 
+/* z-index keeps the ruler above sheets, images, and strokes. */
 .ruler {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
   pointer-events: none;
 }
 
@@ -300,13 +304,13 @@ body,
   padding: 5px 10px;
   font-size: 12px;
   color: #4a4234;
-  background: rgba(74, 66, 52, 0.06);
+  background: transparent;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .toolbar button:hover:not(:disabled) {
-  background: rgba(74, 66, 52, 0.15);
+  background: rgba(74, 66, 52, 0.13);
 }
 
 .toolbar button:disabled {
@@ -319,15 +323,31 @@ body,
   color: #fff;
 }
 
-.toolbar .icon-btn,
-.toolbar .settings-btn {
-  padding: 5px 8px;
-  min-width: 28px;
+.toolbar .icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px;
+  min-width: 27px;
+  justify-content: center;
 }
 
-.toolbar .settings-btn.active,
+.toolbar .icon-btn svg {
+  display: block;
+}
+
 .toolbar .active-tool {
   background: rgba(74, 66, 52, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(74, 66, 52, 0.35);
+}
+
+.toolbar .drop-arrow {
+  opacity: 0.55;
+}
+
+.toolbar .scale-label {
+  font-size: 10px;
+  line-height: 1;
 }
 
 .toolbar-sep {
@@ -355,6 +375,9 @@ body,
 }
 
 .toolbar .expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   padding: 4px 12px;
   background: transparent;
@@ -373,14 +396,13 @@ body,
 .page-controller .page-label {
   font-size: 11px;
   color: rgba(74, 66, 52, 0.6);
-  min-width: 34px;
+  min-width: 30px;
   text-align: center;
 }
 
-.page-controller button {
-  padding: 3px 7px;
-  font-size: 13px;
-  line-height: 1;
+.page-controller .icon-btn {
+  padding: 4px 2px;
+  min-width: 20px;
 }
 
 /* ---- Settings popover ---- */
@@ -409,14 +431,18 @@ body,
   -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   padding: 0 4px;
-  color: rgba(74, 66, 52, 0.8);
+  color: rgba(74, 66, 52, 0.7);
   font-size: 11px;
 }
 
+.opacity-control svg {
+  flex: none;
+}
+
 .opacity-control input[type='range'] {
-  width: 90px;
+  width: 76px;
   accent-color: #4a7dd6;
 }
 
@@ -434,9 +460,12 @@ body,
   font-size: 12px;
 }
 
+/* Compact and centered on its button so it cannot be pushed off-window. */
 .scale-popover {
-  width: 190px;
-  right: -60px;
+  width: 168px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .scale-presets {

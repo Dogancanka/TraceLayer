@@ -2,9 +2,11 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (pen rendering fix + pen options + corner ruler)
+**Last updated:** 2026-07-07 (icon toolbar polish)
 
 ## Current state
+
+Latest: **toolbar is now icon-based** (`src/components/icons.tsx`, inline feather-style SVGs, no icon dependency added). All primary actions are compact icon buttons with tooltips; separators group sheet/import, tools, pages/scale, view, and window controls. Buttons that open popovers (scale, settings) show a tiny drop arrow. Active tool gets a clear highlight (`.active-tool`: darker bg + inset ring). Collapsed pill = chevron-up + "TraceLayer". Also fixed: ruler now renders above images/strokes (`.ruler` z-index 30) and the scale popover is compact and centered on its button so it cannot be pushed off-window. Verified via CDP screenshots. UI-only pass; Ghost Mode logic untouched.
 
 **Pen bug found and fixed for real this time.** Strokes were committed to the DOM but never painted: `.stroke-layer` was a zero-size (`width:0;height:0`) svg relying on `overflow: visible`, and **Chromium does not paint the content of a zero-size svg at all**. Earlier "pen works" verification only counted DOM paths — lesson: verify pixels (screenshots), not DOM. Strokes now render in a full-size svg with a centered `<g transform>` (window size via `src/useWindowSize.ts`). Verified visually via CDP screenshots: grey and red strokes visible on the sheet.
 

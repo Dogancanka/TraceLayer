@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react';
 import { uncalibratedScale } from '../types';
 import type { ScaleCalibration, Tool } from '../types';
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  DropArrow,
+  DropletIcon,
+  EraserIcon,
+  FolderIcon,
+  GearIcon,
+  GhostIcon,
+  ImageIcon,
+  LayersPlusIcon,
+  MinusIcon,
+  PenIcon,
+  RedoIcon,
+  RulerIcon,
+  SaveIcon,
+  UndoIcon,
+  XIcon,
+} from './icons';
 
 const SCALE_PRESETS = ['1:50', '1:100', '1:200'];
 const PEN_COLORS = ['#3a3630', '#c0392b', '#2762c4', '#1e8a4c'];
@@ -86,7 +107,8 @@ export function Toolbar({
           onClick={() => setCollapsed(false)}
           title="Show controls"
         >
-          ▲ TraceLayer
+          <ChevronUpIcon />
+          <span>TraceLayer</span>
         </button>
       </div>
     );
@@ -100,24 +122,33 @@ export function Toolbar({
 
       <button
         type="button"
+        className="icon-btn"
         onClick={onNewPaper}
         disabled={ghost}
-        title="Place a new translucent sheet on top of the stack (does not clear anything)"
+        title="New Sheet: place a translucent sheet on top (clears nothing)"
       >
-        New Sheet
+        <LayersPlusIcon />
       </button>
-      <button type="button" onClick={onImport} disabled={ghost} title="Import PNG/JPG">
-        Import
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onImport}
+        disabled={ghost}
+        title="Import PNG/JPG"
+      >
+        <ImageIcon />
       </button>
+
+      <div className="toolbar-sep" />
 
       <button
         type="button"
-        className={tool === 'pen' ? 'active-tool' : ''}
+        className={`icon-btn${tool === 'pen' ? ' active-tool' : ''}`}
         onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
         disabled={ghost}
         title="Pen: draw on the top sheet"
       >
-        Pen
+        <PenIcon />
       </button>
       {tool === 'pen' && (
         <div className="pen-options">
@@ -144,15 +175,14 @@ export function Toolbar({
           ))}
         </div>
       )}
-
       <button
         type="button"
-        className={tool === 'eraser' ? 'active-tool' : ''}
+        className={`icon-btn${tool === 'eraser' ? ' active-tool' : ''}`}
         onClick={() => onToolChange(tool === 'eraser' ? 'select' : 'eraser')}
         disabled={ghost}
         title="Eraser: remove strokes from the top sheet"
       >
-        Erase
+        <EraserIcon />
       </button>
       <button
         type="button"
@@ -161,7 +191,7 @@ export function Toolbar({
         disabled={ghost || !canUndo}
         title="Undo (Ctrl+Z)"
       >
-        ↶
+        <UndoIcon />
       </button>
       <button
         type="button"
@@ -170,73 +200,34 @@ export function Toolbar({
         disabled={ghost || !canRedo}
         title="Redo (Ctrl+Y)"
       >
-        ↷
+        <RedoIcon />
       </button>
+
+      <div className="toolbar-sep" />
 
       {/* Placeholder for future multi-page (PDF) support — see DocumentPages in types.ts. */}
       <div className="page-controller" title="Multi-page documents coming later">
-        <button type="button" disabled title="Previous page">
-          ‹
+        <button type="button" className="icon-btn" disabled title="Previous page">
+          <ChevronLeftIcon />
         </button>
         <span className="page-label">1 / 1</span>
-        <button type="button" disabled title="Next page">
-          ›
+        <button type="button" className="icon-btn" disabled title="Next page">
+          <ChevronRightIcon />
         </button>
       </div>
-
-      <button
-        type="button"
-        className={`ghost-toggle${ghost ? ' active' : ''}`}
-        onClick={onToggleGhost}
-        title="Ghost Mode: clicks pass through to the app underneath (Ctrl+Alt+G)"
-      >
-        {ghost ? 'Ghost ON' : 'Ghost'}
-      </button>
-
-      <label className="opacity-control" title="Paper opacity">
-        <span>Opacity</span>
-        <input
-          type="range"
-          min={10}
-          max={100}
-          value={Math.round(opacity * 100)}
-          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
-          disabled={ghost}
-        />
-      </label>
-
-      {selectedImageOpacity !== null && (
-        <label className="opacity-control" title="Selected image opacity">
-          <span>Img</span>
-          <input
-            type="range"
-            min={5}
-            max={100}
-            value={Math.round(selectedImageOpacity * 100)}
-            onPointerDown={onImageGestureStart}
-            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
-            disabled={ghost}
-          />
-        </label>
-      )}
-
-      <button type="button" onClick={onSave} disabled={ghost} title="Save project as JSON">
-        Save
-      </button>
-      <button type="button" onClick={onLoad} disabled={ghost} title="Load project JSON">
-        Load
-      </button>
 
       {/* Scale (målestok): label-only placeholder until real calibration lands. */}
       <div className="settings-wrap">
         <button
           type="button"
-          className={`scale-btn${openPopover === 'scale' ? ' active' : ''}`}
+          className={`icon-btn scale-btn${openPopover === 'scale' ? ' active-tool' : ''}`}
           onClick={() => togglePopover('scale')}
           disabled={ghost}
-          title="Drawing scale (målestok)"
+          title={`Drawing scale (målestok): ${scale.drawingScale ?? 'uncalibrated'}`}
         >
-          {scale.drawingScale ?? 'Scale: –'}
+          <RulerIcon />
+          {scale.drawingScale && <span className="scale-label">{scale.drawingScale}</span>}
+          <DropArrow />
         </button>
         {openPopover === 'scale' && (
           <div className="settings-popover scale-popover">
@@ -270,15 +261,61 @@ export function Toolbar({
         )}
       </div>
 
+      <div className="toolbar-sep" />
+
+      <button
+        type="button"
+        className={`icon-btn ghost-toggle${ghost ? ' active' : ''}`}
+        onClick={onToggleGhost}
+        title="Ghost Mode: clicks pass through to the app underneath (Ctrl+Alt+G)"
+      >
+        <GhostIcon />
+      </button>
+
+      <label className="opacity-control" title="Paper opacity">
+        <DropletIcon />
+        <input
+          type="range"
+          min={10}
+          max={100}
+          value={Math.round(opacity * 100)}
+          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
+          disabled={ghost}
+        />
+      </label>
+
+      {selectedImageOpacity !== null && (
+        <label className="opacity-control" title="Selected image opacity">
+          <ImageIcon />
+          <input
+            type="range"
+            min={5}
+            max={100}
+            value={Math.round(selectedImageOpacity * 100)}
+            onPointerDown={onImageGestureStart}
+            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
+            disabled={ghost}
+          />
+        </label>
+      )}
+
+      <button type="button" className="icon-btn" onClick={onSave} disabled={ghost} title="Save project as JSON">
+        <SaveIcon />
+      </button>
+      <button type="button" className="icon-btn" onClick={onLoad} disabled={ghost} title="Load project JSON">
+        <FolderIcon />
+      </button>
+
       <div className="settings-wrap">
         <button
           type="button"
-          className={`settings-btn${openPopover === 'settings' ? ' active' : ''}`}
+          className={`icon-btn settings-btn${openPopover === 'settings' ? ' active-tool' : ''}`}
           onClick={() => togglePopover('settings')}
           disabled={ghost}
           title="Settings"
         >
-          ⚙
+          <GearIcon />
+          <DropArrow />
         </button>
         {openPopover === 'settings' && (
           <div className="settings-popover">
@@ -327,13 +364,13 @@ export function Toolbar({
         onClick={() => setCollapsed(true)}
         title="Collapse controls"
       >
-        ▾
+        <ChevronDownIcon />
       </button>
       <button type="button" className="icon-btn" onClick={onHide} title="Hide overlay (minimize)">
-        –
+        <MinusIcon />
       </button>
-      <button type="button" className="close-btn" onClick={onClose} title="Quit TraceLayer">
-        ✕
+      <button type="button" className="icon-btn close-btn" onClick={onClose} title="Quit TraceLayer">
+        <XIcon />
       </button>
     </div>
   );
