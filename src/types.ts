@@ -1,8 +1,12 @@
 /** Active interaction tool. 'select' = move/scale/rotate images. */
-export type Tool = 'select' | 'pen' | 'eraser';
+export type Tool = 'select' | 'pen' | 'eraser' | 'text' | 'callout';
 
 export const DEFAULT_STROKE_COLOR = '#3a3630';
 export const DEFAULT_STROKE_WIDTH = 2;
+export const DEFAULT_TEXTBOX_WIDTH = 190;
+export const DEFAULT_CALLOUT_COLOR = '#3a3630';
+/** Default offset (px) of a new callout's bubble from its arrow target. */
+export const DEFAULT_BUBBLE_OFFSET = 70;
 
 /** One pen stroke. Flat [x0, y0, x1, y1, …] list, window-center-relative px. */
 export interface Stroke {
@@ -14,6 +18,35 @@ export interface Stroke {
   width: number;
 }
 
+/** A movable, editable note. Position is window-center-relative, like strokes/images. */
+export interface TextBox {
+  id: string;
+  /** The sheet this box belongs to; it renders and is interactive only when that sheet is reachable. */
+  sheetId: string;
+  x: number;
+  y: number;
+  /** Box width in px; height grows with content. */
+  width: number;
+  text: string;
+}
+
+export interface CalloutStyle {
+  /** CSS color for the bubble border, arrow, and text. */
+  color: string;
+}
+
+/** A note bubble with an arrow pointing at a target point. */
+export interface Callout {
+  id: string;
+  sheetId: string;
+  text: string;
+  /** Window-center-relative position of the bubble. */
+  bubble: { x: number; y: number };
+  /** Window-center-relative point the arrow points at. */
+  target: { x: number; y: number };
+  style: CalloutStyle;
+}
+
 /** One sheet of tracing paper in the stack. */
 export interface PaperSheet {
   id: string;
@@ -21,6 +54,24 @@ export interface PaperSheet {
   tilt: number;
   /** Pen strokes drawn on this sheet. */
   strokes: Stroke[];
+  /** Text notes placed on this sheet. */
+  textBoxes: TextBox[];
+  /** Callout bubbles (with arrows) placed on this sheet. */
+  callouts: Callout[];
+  /**
+   * Reserved per-sheet scale calibration placeholder — mirrors
+   * ScaleCalibration but scoped to a single sheet. Not wired to any UI yet;
+   * the app currently uses one project-wide ScaleCalibration (ProjectFile.scale).
+   * Reserved so per-sheet calibration can land later without another format change.
+   */
+  calibration: ScaleCalibration | null;
+}
+
+/** Which kind of item is currently selected, and its id. */
+export type SelectionKind = 'image' | 'text' | 'callout';
+export interface Selection {
+  kind: SelectionKind;
+  id: string;
 }
 
 /** An imported PNG/JPG with its transform, relative to the window center. */
@@ -79,9 +130,20 @@ export interface DocumentPages {
   pageImageIds: string[];
 }
 
+/**
+ * Schema version of the on-disk project format. Bump this when the format
+ * changes and extend `normalizeProject` to upgrade older files — never
+ * remove an older version's normalization path.
+ *
+ * v1: papers had only `strokes`.
+ * v2: papers also have `textBoxes`, `callouts`, and a reserved `calibration`
+ *     placeholder (see PaperSheet).
+ */
+export const SCHEMA_VERSION = 2;
+
 /** On-disk project format (saved as .tracelayer.json). */
 export interface ProjectFile {
-  version: 1;
+  version: 1 | 2;
   opacity: number;
   papers: PaperSheet[];
   images: ImageItem[];
@@ -96,13 +158,17 @@ export const nextId = (): string =>
   `${Date.now().toString(36)}-${(idCounter++).toString(36)}`;
 
 /**
- * Fill in fields that older project files (still version 1) may lack, so
- * loading stays backwards compatible. Images without a paperId land on the
- * top sheet, where they remain interactive.
+ * Fill in fields that older project files (v1, or a v2 saved before a field
+ * was added) may lack, so loading stays backwards compatible. Images without
+ * a paperId land on the top sheet, where they remain interactive. Always
+ * returns a current-shape (v2) project — the return value's `version` is
+ * SCHEMA_VERSION regardless of the input's.
  */
 export function normalizeProject(project: ProjectFile): ProjectFile {
   const rawPapers =
-    project.papers.length > 0 ? project.papers : [{ id: nextId(), tilt: 0, strokes: [] }];
+    project.papers.length > 0
+      ? project.papers
+      : [{ id: nextId(), tilt: 0, strokes: [], textBoxes: [], callouts: [], calibration: null }];
   const papers = rawPapers.map((paper) => ({
     ...paper,
     strokes: (paper.strokes ?? []).map((stroke) => ({
@@ -110,10 +176,24 @@ export function normalizeProject(project: ProjectFile): ProjectFile {
       color: stroke.color ?? DEFAULT_STROKE_COLOR,
       width: stroke.width ?? DEFAULT_STROKE_WIDTH,
     })),
+    textBoxes: (paper.textBoxes ?? []).map((box) => ({
+      ...box,
+      sheetId: box.sheetId ?? paper.id,
+      width: box.width ?? DEFAULT_TEXTBOX_WIDTH,
+      text: box.text ?? '',
+    })),
+    callouts: (paper.callouts ?? []).map((callout) => ({
+      ...callout,
+      sheetId: callout.sheetId ?? paper.id,
+      text: callout.text ?? '',
+      style: callout.style ?? { color: DEFAULT_CALLOUT_COLOR },
+    })),
+    calibration: paper.calibration ?? null,
   }));
   const topPaperId = papers[papers.length - 1].id;
   return {
     ...project,
+    version: SCHEMA_VERSION,
     papers,
     images: project.images.map((img) => ({
       ...img,

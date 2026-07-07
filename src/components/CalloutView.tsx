@@ -1,0 +1,115 @@
+import { useEffect, useRef } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { Callout } from '../types';
+
+interface CalloutViewProps {
+  callout: Callout;
+  selected: boolean;
+  ghost: boolean;
+  onSelect: (id: string) => void;
+  onChange: (id: string, patch: Partial<Callout>) => void;
+  /** Called once when a drag starts, or when editing begins (undo snapshot). */
+  onGestureStart: () => void;
+}
+
+type DragField = 'bubble' | 'target';
+
+/**
+ * A note bubble plus a draggable arrow target handle. The arrow line itself
+ * is rendered by the caller (LayerStack) in a shared per-sheet svg, above
+ * images/strokes; this component renders only the interactive bubble and
+ * target handle.
+ */
+export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGestureStart }: CalloutViewProps) {
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+    field: DragField;
+  } | null>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+
+  // Focus immediately if mounted already selected — the case right after
+  // placing a new callout. Mount-only so re-selecting an existing callout by
+  // dragging its grip/handle doesn't steal focus.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (selected) textRef.current?.focus();
+  }, []);
+
+  const beginDrag = (field: DragField) => (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (ghost || e.button !== 0) return;
+    e.stopPropagation();
+    onSelect(callout.id);
+    onGestureStart();
+    const orig = field === 'bubble' ? callout.bubble : callout.target;
+    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, origX: orig.x, origY: orig.y, field };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const point = { x: drag.origX + (e.clientX - drag.startX), y: drag.origY + (e.clientY - drag.startY) };
+    onChange(callout.id, drag.field === 'bubble' ? { bubble: point } : { target: point });
+  };
+
+  const onDragEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  return (
+    <>
+      <div
+        className={`callout-bubble${selected ? ' selected' : ''}`}
+        style={{
+          transform: `translate(-50%, -50%) translate(${callout.bubble.x}px, ${callout.bubble.y}px)`,
+          borderColor: callout.style.color,
+        }}
+      >
+        <div
+          className="callout-grip"
+          style={{ color: callout.style.color }}
+          onPointerDown={beginDrag('bubble')}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          title="Drag to move"
+        >
+          ⠿
+        </div>
+        <div
+          ref={textRef}
+          className="callout-text"
+          contentEditable={!ghost}
+          suppressContentEditableWarning
+          data-placeholder="Note…"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onSelect(callout.id);
+          }}
+          onFocus={onGestureStart}
+          onInput={(e) => onChange(callout.id, { text: e.currentTarget.innerText })}
+        >
+          {callout.text}
+        </div>
+      </div>
+      {selected && !ghost && (
+        <div
+          className="callout-target-handle"
+          style={{
+            transform: `translate(-50%, -50%) translate(${callout.target.x}px, ${callout.target.y}px)`,
+            background: callout.style.color,
+          }}
+          onPointerDown={beginDrag('target')}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          title="Drag to move the arrow target"
+        />
+      )}
+    </>
+  );
+}

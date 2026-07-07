@@ -42,6 +42,22 @@ export const PenIcon = () => (
   </Icon>
 );
 
+export const NoteIcon = () => (
+  <Icon>
+    <path d="M5 3h10l4 4v14H5Z" />
+    <path d="M15 3v4h4" />
+    <path d="M8 11h8M8 15h5" />
+  </Icon>
+);
+
+export const CalloutIcon = () => (
+  <Icon>
+    <rect x="2" y="4" width="13" height="9" rx="2" />
+    <path d="M6 13v4" />
+    <path d="M15 8.5h6M21 8.5l-3-3M21 8.5l-3 3" />
+  </Icon>
+);
+
 export const EraserIcon = () => (
   <Icon>
     <path d="m7 21-4.3-4.3a1.5 1.5 0 0 1 0-2.1l9.6-9.6a1.5 1.5 0 0 1 2.1 0l5.6 5.6a1.5 1.5 0 0 1 0 2.1L13 19.6a1.5 1.5 0 0 1-1 .4H7Z" />

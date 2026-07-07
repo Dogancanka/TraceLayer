@@ -2,15 +2,15 @@ import { useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { strokeHit, strokePath } from '../stroke';
 import { useWindowSize } from '../useWindowSize';
-import type { Stroke, Tool } from '../types';
+import type { Stroke } from '../types';
 
 const ERASE_RADIUS = 6;
 const MIN_POINT_DIST = 1.5;
 
 interface DrawingSurfaceProps {
-  tool: Exclude<Tool, 'select'>;
-  /** Strokes of the top sheet — the only sheet the eraser can reach. */
-  topStrokes: Stroke[];
+  tool: 'pen' | 'eraser';
+  /** Strokes of the active sheet — the only sheet the eraser can reach. */
+  sheetStrokes: Stroke[];
   penColor: string;
   penWidth: number;
   onStrokeEnd: (points: number[]) => void;
@@ -25,7 +25,7 @@ interface DrawingSurfaceProps {
  */
 export function DrawingSurface({
   tool,
-  topStrokes,
+  sheetStrokes,
   penColor,
   penWidth,
   onStrokeEnd,
@@ -43,7 +43,7 @@ export function DrawingSurface({
   ];
 
   const eraseAt = (x: number, y: number) => {
-    for (const stroke of topStrokes) {
+    for (const stroke of sheetStrokes) {
       if (strokeHit(stroke, x, y, ERASE_RADIUS)) onErase(stroke.id);
     }
   };
