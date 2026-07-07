@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { uncalibratedScale } from '../types';
 import type { ScaleCalibration, Tool } from '../types';
 import {
+  CameraIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -48,6 +49,7 @@ interface ToolbarProps {
   onToggleGhost: () => void;
   onNewPaper: () => void;
   onImport: () => void;
+  onCapture: () => void;
   onOpacityChange: (value: number) => void;
   onImageOpacityChange: (value: number) => void;
   onImageGestureStart: () => void;
@@ -77,6 +79,7 @@ export function Toolbar({
   onToggleGhost,
   onNewPaper,
   onImport,
+  onCapture,
   onOpacityChange,
   onImageOpacityChange,
   onImageGestureStart,
@@ -137,6 +140,15 @@ export function Toolbar({
         title="Import PNG/JPG"
       >
         <ImageIcon />
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onCapture}
+        disabled={ghost}
+        title="Snapshot: capture the screen under the overlay onto the top sheet (aligned 1:1)"
+      >
+        <CameraIcon />
       </button>
 
       <div className="toolbar-sep" />

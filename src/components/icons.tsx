@@ -135,6 +135,13 @@ export const XIcon = () => (
   </Icon>
 );
 
+export const CameraIcon = () => (
+  <Icon>
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z" />
+    <circle cx="12" cy="13" r="4" />
+  </Icon>
+);
+
 export const DropletIcon = () => (
   <Icon>
     <path d="M12 3s6 6.3 6 11a6 6 0 0 1-12 0c0-4.7 6-11 6-11Z" />

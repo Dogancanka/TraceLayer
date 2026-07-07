@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain } from 'electron';
+import { app, BrowserWindow, desktopCapturer, dialog, globalShortcut, ipcMain, screen } from 'electron';
 import * as fsSync from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -175,6 +175,46 @@ app.whenReady().then(() => {
     if (result.canceled || result.filePaths.length === 0) return null;
     return fs.readFile(result.filePaths[0], 'utf-8');
   });
+
+  // Snapshot: capture the screen area under the overlay and hand it to the
+  // renderer as an image. The overlay is made fully transparent for a moment
+  // so it does not appear in its own capture. Local only — nothing leaves
+  // the machine.
+  ipcMain.handle(
+    'capture-under',
+    async (): Promise<{ dataUrl: string; scaleFactor: number } | null> => {
+      if (!win) return null;
+      const bounds = win.getBounds();
+      const display = screen.getDisplayMatching(bounds);
+      const scaleFactor = display.scaleFactor;
+      win.setOpacity(0);
+      try {
+        // Give the compositor a frame to actually drop the overlay.
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize: {
+            width: Math.round(display.size.width * scaleFactor),
+            height: Math.round(display.size.height * scaleFactor),
+          },
+        });
+        const source =
+          sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
+        if (!source || source.thumbnail.isEmpty()) return null;
+        const cropped = source.thumbnail.crop({
+          x: Math.round((bounds.x - display.bounds.x) * scaleFactor),
+          y: Math.round((bounds.y - display.bounds.y) * scaleFactor),
+          width: Math.round(bounds.width * scaleFactor),
+          height: Math.round(bounds.height * scaleFactor),
+        });
+        return { dataUrl: cropped.toDataURL(), scaleFactor };
+      } catch {
+        return null;
+      } finally {
+        win?.setOpacity(1);
+      }
+    },
+  );
 
   // Hide = minimize. The overlay leaves the screen but the app keeps
   // running; restore from the taskbar. Deliberately not app.quit().

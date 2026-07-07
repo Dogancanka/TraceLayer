@@ -54,6 +54,7 @@ npm run typecheck  # type-check only
 | Move window | Drag the top strip or the toolbar grip (⠿) |
 | New sheet of paper | Toolbar **New Paper** |
 | Import image | Toolbar **Import** (PNG/JPG) |
+| Snapshot screen under overlay | Toolbar **camera** button (lands 1:1 on the top sheet) |
 | Draw / erase on top sheet | Toolbar **Pen** / **Erase** |
 | Undo / redo | **Ctrl+Z** / **Ctrl+Y**, or toolbar ↶ ↷ |
 | Move image | Drag it |

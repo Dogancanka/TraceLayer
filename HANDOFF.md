@@ -2,9 +2,11 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (icon toolbar polish)
+**Last updated:** 2026-07-07 (Snapshot feature)
 
 ## Current state
+
+Latest: **Snapshot (screenshot-and-trace)** — camera button in the toolbar captures the screen *under* the overlay and drops it on the top sheet as a normal image, aligned 1:1 with the screen. Flow: IPC `capture-under` → main sets `win.setOpacity(0)`, waits 150 ms for the compositor, grabs the matching display via `desktopCapturer` at physical resolution, crops to the window bounds, restores opacity, returns `{dataUrl, scaleFactor}`; renderer inserts an ImageItem at center with `scale = 1/scaleFactor`. Local only, user-triggered, nothing persisted or sent anywhere. Verified end-to-end via CDP (captured desktop visible on the sheet, natural size = window × scaleFactor). Known edge: a window straddling two monitors captures only the best-matching display (TASKS.md).
 
 Latest: **toolbar is now icon-based** (`src/components/icons.tsx`, inline feather-style SVGs, no icon dependency added). All primary actions are compact icon buttons with tooltips; separators group sheet/import, tools, pages/scale, view, and window controls. Buttons that open popovers (scale, settings) show a tiny drop arrow. Active tool gets a clear highlight (`.active-tool`: darker bg + inset ring). Collapsed pill = chevron-up + "TraceLayer". Also fixed: ruler now renders above images/strokes (`.ruler` z-index 30) and the scale popover is compact and centered on its button so it cannot be pushed off-window. Verified via CDP screenshots. UI-only pass; Ghost Mode logic untouched.
 

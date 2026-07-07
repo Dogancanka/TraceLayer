@@ -21,6 +21,14 @@ const api = {
   /** Open a file dialog for PNG/JPG. Resolves to a data URL, or null if cancelled. */
   importImage: (): Promise<string | null> => ipcRenderer.invoke('import-image'),
 
+  /**
+   * Capture the screen under the overlay (overlay hidden for a moment) as a
+   * data URL cropped to the window bounds, plus the display scale factor so
+   * the renderer can place it 1:1 with the screen.
+   */
+  captureUnder: (): Promise<{ dataUrl: string; scaleFactor: number } | null> =>
+    ipcRenderer.invoke('capture-under'),
+
   /** Open a save dialog and write the project JSON. Resolves true on success. */
   saveProject: (json: string): Promise<boolean> =>
     ipcRenderer.invoke('save-project', json),

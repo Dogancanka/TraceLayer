@@ -30,7 +30,7 @@ Transparent always-on-top paper window, Ghost Mode click-through, image tracing 
 ## Future / research
 
 - **macOS support** — documented intent, not started. Needs its own click-through and always-on-top verification (`setIgnoreMouseEvents` exists but window-level behavior differs). Windows remains the primary platform until 1.0.
-- Screenshot-and-trace: capture the screen under the overlay as a reference layer
+- ~~Screenshot-and-trace: capture the screen under the overlay as a reference layer~~ **Done** (Snapshot button, 2026-07-07): `desktopCapturer` in main, overlay hidden for one frame, crop to window bounds, placed 1:1 on the top sheet.
 - Grid/guide overlays (architectural scales)
 
 ## Explicitly not planned — ever

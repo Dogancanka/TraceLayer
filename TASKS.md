@@ -51,6 +51,11 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Responsive corner ruler (top + left) with px ticks, or approximate real-world units when a scale preset is set
 - [x] Click-through failsafe: re-assert ignoreMouseEvents on focus/restore/show
 
+## Snapshot / screenshot-and-trace (2026-07-07)
+
+- [x] Camera button: capture the screen under the overlay (`desktopCapturer`, overlay `setOpacity(0)` during grab), crop to window bounds, insert as image on the top sheet aligned 1:1 with the screen (scale = 1/displayScaleFactor)
+- [ ] Multi-monitor edge case: window straddling two displays captures only the best-matching display
+
 ## Milestone 0.1.x — hardening (only after manual verification)
 
 - [ ] Error toasts instead of `alert()` for load failures

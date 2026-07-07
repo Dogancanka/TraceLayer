@@ -170,6 +170,28 @@ export default function App() {
     setTool('select');
   }, [papers, pushHistory]);
 
+  // Snapshot of the screen under the overlay → image on the top sheet,
+  // placed 1:1 with the screen (scale = 1/displayScaleFactor, centered on
+  // the window) so the capture lines up exactly with what it traced.
+  const captureUnder = useCallback(async () => {
+    const shot = await window.traceLayer.captureUnder();
+    if (!shot) return;
+    pushHistory();
+    const img: ImageItem = {
+      id: nextId(),
+      dataUrl: shot.dataUrl,
+      x: 0,
+      y: 0,
+      scale: 1 / shot.scaleFactor,
+      rotation: 0,
+      opacity: 1,
+      paperId: papers[papers.length - 1].id,
+    };
+    setImages((prev) => [...prev, img]);
+    setSelectedId(img.id);
+    setTool('select');
+  }, [papers, pushHistory]);
+
   // Live updates during a gesture; the undo snapshot is taken once at
   // gesture start (ImageView calls onGestureStart / pushHistory).
   const updateImage = useCallback((id: string, patch: Partial<ImageItem>) => {
@@ -289,6 +311,7 @@ export default function App() {
         onToggleGhost={toggleGhost}
         onNewPaper={addPaper}
         onImport={() => void importImage()}
+        onCapture={() => void captureUnder()}
         onOpacityChange={setOpacity}
         onImageOpacityChange={(value) => {
           if (selectedId) updateImage(selectedId, { opacity: value });
