@@ -2,13 +2,21 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (New Paper fix + roadmap 0.2 features)
+**Last updated:** 2026-07-07 (UX/bugfix pass)
 
 ## Current state
 
-MVP 0.1 + toolbar polish + most of roadmap 0.2. `npm run typecheck` and `npm run build` pass; app launches.
+MVP 0.1 + toolbar polish + most of roadmap 0.2 + a UX/bugfix pass. `npm run typecheck` and `npm run build` pass; app launches.
 
-Latest changes:
+Latest changes (UX/bugfix pass):
+
+- **"New Paper" renamed to "New Sheet"** — adds a translucent sheet on top, never clears anything. A separate **"New Project (clear workspace)"** action lives in the ⚙ settings popover (confirm dialog, undoable — it pushes a history snapshot first).
+- **Pen investigated and verified working end-to-end** via CDP trusted input (live preview during drag, committed path in DOM, correct coordinates). The reported "pen does not work" was almost certainly **two app instances stacked on top of each other** (both always-on-top; input landed in the stale one). Fixed the root cause: `app.requestSingleInstanceLock()` in `electron/main.ts` — a second launch quits itself and focuses the existing window.
+- **Grey top bar removed**: the drag strip is now fully transparent; a small grip dot hint fades in on hover only. Still draggable.
+- **Toolbar now sits below the paper**: sheets keep a 64 px bottom margin (`.paper-sheet` inset — keep in sync with `.toolbar` bottom offset), so the bar floats in the transparent band under the sheet, not on top of it. Collapse pill behavior unchanged (`.toolbar` class contract with the Ghost Mode hover check still holds).
+- **Scale (målestok) UI placeholder**: toolbar button shows the scale label ("Scale: –" / "1:100"); its popover has "Scale: Uncalibrated", presets 1:50 / 1:100 / 1:200 (label-only, no measurement), Clear, and a disabled "Calibrate…" button. Data model `ScaleCalibration` (`unit`, `drawingScale`, `pixelsPerUnit`, `calibrationPoints`) is saved/loaded as optional `scale` on `ProjectFile`; older files normalize to uncalibrated.
+
+Earlier changes:
 
 - **New Paper fixed.** It looked like a no-op: all images rendered above all sheets and sheets were opaque. Now sheets and their images/strokes render interleaved (`LayerStack`), sheets are slightly translucent, and images belong to a sheet (`ImageItem.paperId`). A new sheet visibly covers and dims everything below it; covered content becomes non-interactive naturally. Old project files still load (`normalizeProject()` back-fills missing fields).
 - **Pen + eraser** (0.2): draw on the top sheet with smoothed SVG strokes; eraser removes whole strokes it touches (top sheet only). `DrawingSurface` mounts only while a drawing tool is active in Edit Mode; Ghost Mode untouched.
@@ -29,7 +37,8 @@ Latest changes:
 ## What does not work yet / unverified
 
 - **Ghost Mode click-through has NOT been manually verified over real apps.** The implementation is the standard Electron pattern, but nobody has clicked through onto Notepad/browser/CAD yet. This is the first thing to verify (TASKS.md).
-- Drawing/eraser/undo not manually exercised in a real tracing workflow yet.
+- Scale UI is a label placeholder only — no measurement, no calibration flow.
+- Eraser verified in code review only; pen/undo verified via CDP input simulation, not a human workflow.
 - Edge-resizing a transparent frameless window on Windows is historically finicky in Electron; unverified.
 - Paper rotation (0.2 item): not implemented — needs pointer-coordinate mapping design so drawing works on a rotated stage.
 - Pen pressure: not implemented (optional 0.2 item).

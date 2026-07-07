@@ -17,22 +17,35 @@ body,
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-/* Thin strip at the top for moving the frameless window in Edit Mode. */
+/* Invisible strip at the top for moving the frameless window in Edit Mode.
+   Kept transparent so the app reads as paper, not as a window chrome; a
+   small grip dot hint appears only on hover. */
 .drag-handle {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 14px;
+  height: 16px;
   z-index: 40;
   -webkit-app-region: drag;
-  border-radius: 7px;
-  background: rgba(0, 0, 0, 0.06);
+  background: transparent;
+}
+
+.drag-handle::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 44px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(74, 66, 52, 0);
   transition: background 0.15s ease;
 }
 
-.drag-handle:hover {
-  background: rgba(0, 0, 0, 0.16);
+.drag-handle:hover::after {
+  background: rgba(74, 66, 52, 0.35);
 }
 
 /* ---- Stage: papers + images. Opacity slider applies here. ---- */
@@ -56,7 +69,9 @@ body,
 
 .paper-sheet {
   position: absolute;
-  inset: 18px;
+  /* Extra room at the bottom so the control bar sits below the sheet,
+     not on top of it. Keep in sync with .toolbar bottom offset. */
+  inset: 18px 18px 64px;
   /* Translucent like real tracing paper: layers underneath show through
      dimmed, so a new sheet visibly covers previous work. */
   background-color: rgba(247, 242, 230, 0.84);
@@ -171,7 +186,7 @@ body,
 
 .toolbar {
   position: fixed;
-  bottom: 16px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
@@ -335,6 +350,45 @@ body,
 .settings-hints-title {
   font-weight: 600;
   color: #4a4234;
+  font-size: 12px;
+}
+
+.scale-popover {
+  width: 190px;
+  right: -60px;
+}
+
+.scale-presets {
+  display: flex;
+  gap: 5px;
+}
+
+.scale-presets button {
+  flex: 1;
+  padding: 4px 0;
+}
+
+.settings-popover button {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #4a4234;
+  background: rgba(74, 66, 52, 0.06);
+  cursor: pointer;
+}
+
+.settings-popover button:hover:not(:disabled) {
+  background: rgba(74, 66, 52, 0.15);
+}
+
+.settings-popover button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.settings-popover button.active-tool {
+  background: rgba(74, 66, 52, 0.22);
 }
 
 .settings-hints > div:not(.settings-hints-title) {

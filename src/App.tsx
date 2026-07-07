@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { LayerStack } from './components/LayerStack';
 import { DrawingSurface } from './components/DrawingSurface';
-import { nextId, normalizeProject } from './types';
-import type { ImageItem, PaperSheet, ProjectFile, Stroke, Tool } from './types';
+import { nextId, normalizeProject, uncalibratedScale } from './types';
+import type { ImageItem, PaperSheet, ProjectFile, ScaleCalibration, Stroke, Tool } from './types';
 
 const randomTilt = () => (Math.random() - 0.5) * 1.6;
 const newSheet = (tilt = 0): PaperSheet => ({ id: nextId(), tilt, strokes: [] });
@@ -23,6 +23,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [opacity, setOpacity] = useState(0.85);
   const [tool, setTool] = useState<Tool>('select');
+  const [scale, setScale] = useState<ScaleCalibration>(uncalibratedScale);
 
   // ---- Undo/redo ----
   // History lives in refs (no re-render per snapshot); historyVersion bumps
@@ -132,6 +133,21 @@ export default function App() {
     setSelectedId(null); // whatever was selected is now under the new sheet
   }, [pushHistory]);
 
+  // Full reset, unlike New Sheet. Undoable (snapshot is pushed first).
+  const newProject = useCallback(() => {
+    const ok = window.confirm(
+      'Start a new project? All sheets, drawings and images are cleared. (Ctrl+Z undoes this.)',
+    );
+    if (!ok) return;
+    pushHistory();
+    setPapers([newSheet()]);
+    setImages([]);
+    setScale(uncalibratedScale());
+    setOpacity(0.85);
+    setSelectedId(null);
+    setTool('select');
+  }, [pushHistory]);
+
   const importImage = useCallback(async () => {
     const dataUrl = await window.traceLayer.importImage();
     if (!dataUrl) return;
@@ -192,9 +208,9 @@ export default function App() {
   );
 
   const saveProject = useCallback(async () => {
-    const project: ProjectFile = { version: 1, opacity, papers, images };
+    const project: ProjectFile = { version: 1, opacity, papers, images, scale };
     await window.traceLayer.saveProject(JSON.stringify(project, null, 2));
-  }, [opacity, papers, images]);
+  }, [opacity, papers, images, scale]);
 
   const loadProject = useCallback(async () => {
     const raw = await window.traceLayer.loadProject();
@@ -208,6 +224,7 @@ export default function App() {
       const project = normalizeProject(parsed);
       setPapers(project.papers);
       setImages(project.images);
+      setScale(project.scale ?? uncalibratedScale());
       setOpacity(typeof project.opacity === 'number' ? project.opacity : 0.85);
       setSelectedId(null);
       setTool('select');
@@ -253,6 +270,9 @@ export default function App() {
         canUndo={pastRef.current.length > 0}
         canRedo={futureRef.current.length > 0}
         selectedImageOpacity={selectedImage?.opacity ?? null}
+        scale={scale}
+        onScaleChange={setScale}
+        onNewProject={newProject}
         onToolChange={changeTool}
         onUndo={undo}
         onRedo={redo}

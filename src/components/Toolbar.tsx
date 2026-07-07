@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { Tool } from '../types';
+import { uncalibratedScale } from '../types';
+import type { ScaleCalibration, Tool } from '../types';
+
+const SCALE_PRESETS = ['1:50', '1:100', '1:200'];
 
 interface ToolbarProps {
   ghost: boolean;
@@ -9,6 +12,9 @@ interface ToolbarProps {
   canRedo: boolean;
   /** Opacity of the selected image, or null when nothing is selected. */
   selectedImageOpacity: number | null;
+  scale: ScaleCalibration;
+  onScaleChange: (scale: ScaleCalibration) => void;
+  onNewProject: () => void;
   onToolChange: (tool: Tool) => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -31,6 +37,9 @@ export function Toolbar({
   canUndo,
   canRedo,
   selectedImageOpacity,
+  scale,
+  onScaleChange,
+  onNewProject,
   onToolChange,
   onUndo,
   onRedo,
@@ -46,11 +55,13 @@ export function Toolbar({
   onClose,
 }: ToolbarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // One popover at a time; both are Edit Mode only, so Ghost Mode closes them.
+  const [openPopover, setOpenPopover] = useState<'settings' | 'scale' | null>(null);
+  const togglePopover = (which: 'settings' | 'scale') =>
+    setOpenPopover((current) => (current === which ? null : which));
 
-  // Settings controls are Edit Mode only; close the popover when Ghost Mode starts.
   useEffect(() => {
-    if (ghost) setSettingsOpen(false);
+    if (ghost) setOpenPopover(null);
   }, [ghost]);
 
   // The root keeps the `toolbar` class in both states: the Ghost Mode
@@ -77,8 +88,13 @@ export function Toolbar({
         ⠿
       </div>
 
-      <button type="button" onClick={onNewPaper} disabled={ghost} title="Place a new sheet on top">
-        New Paper
+      <button
+        type="button"
+        onClick={onNewPaper}
+        disabled={ghost}
+        title="Place a new translucent sheet on top of the stack (does not clear anything)"
+      >
+        New Sheet
       </button>
       <button type="button" onClick={onImport} disabled={ghost} title="Import PNG/JPG">
         Import
@@ -175,18 +191,71 @@ export function Toolbar({
         Load
       </button>
 
+      {/* Scale (målestok): label-only placeholder until real calibration lands. */}
       <div className="settings-wrap">
         <button
           type="button"
-          className={`settings-btn${settingsOpen ? ' active' : ''}`}
-          onClick={() => setSettingsOpen((open) => !open)}
+          className={`scale-btn${openPopover === 'scale' ? ' active' : ''}`}
+          onClick={() => togglePopover('scale')}
+          disabled={ghost}
+          title="Drawing scale (målestok)"
+        >
+          {scale.drawingScale ?? 'Scale: –'}
+        </button>
+        {openPopover === 'scale' && (
+          <div className="settings-popover scale-popover">
+            <div className="settings-hints-title">
+              Scale: {scale.drawingScale ?? 'Uncalibrated'}
+            </div>
+            <div className="scale-presets">
+              {SCALE_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className={scale.drawingScale === preset ? 'active-tool' : ''}
+                  onClick={() => onScaleChange({ ...scale, drawingScale: preset })}
+                  title={`Label the drawing as ${preset} (no measurement yet)`}
+                >
+                  {preset}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => onScaleChange(uncalibratedScale())}
+                title="Remove the scale label"
+              >
+                Clear
+              </button>
+            </div>
+            <button type="button" disabled title="Measured calibration coming later">
+              Calibrate…
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-wrap">
+        <button
+          type="button"
+          className={`settings-btn${openPopover === 'settings' ? ' active' : ''}`}
+          onClick={() => togglePopover('settings')}
           disabled={ghost}
           title="Settings"
         >
           ⚙
         </button>
-        {settingsOpen && (
+        {openPopover === 'settings' && (
           <div className="settings-popover">
+            <button
+              type="button"
+              onClick={() => {
+                setOpenPopover(null);
+                onNewProject();
+              }}
+              title="Clear all sheets, drawings and images and start over"
+            >
+              New Project (clear workspace)
+            </button>
             <div className="settings-hints">
               <div className="settings-hints-title">Shortcuts</div>
               <div>

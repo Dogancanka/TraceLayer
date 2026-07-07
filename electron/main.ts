@@ -97,6 +97,18 @@ function createWindow(): void {
   });
 }
 
+// Two overlapping transparent overlays are indistinguishable on screen and
+// input lands unpredictably — enforce a single instance.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+
+app.on('second-instance', () => {
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
+});
+
 app.whenReady().then(() => {
   createWindow();
 

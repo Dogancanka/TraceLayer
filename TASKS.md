@@ -34,6 +34,16 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [ ] Paper rotation (rotate paper *content*, not the OS window) — needs pointer-coordinate mapping for drawing on a rotated stage; design before building
 - [ ] Manual verification: draw/erase/undo over a real workflow; strokes are not clipped to the sheet edge (known cosmetic issue)
 
+## UX/bugfix pass (2026-07-07)
+
+- [x] Rename "New Paper" → "New Sheet"; clarify tooltip (adds sheet, clears nothing)
+- [x] "New Project (clear workspace)" action in settings popover (confirm + undoable)
+- [x] Pen verified end-to-end via CDP trusted input; root cause of "pen not working" was stacked duplicate instances → added single-instance lock in main
+- [x] Remove grey top bar (transparent drag strip, grip hint on hover only)
+- [x] Toolbar visually below the sheet (64 px bottom paper margin)
+- [x] Scale/målestok UI placeholder (Uncalibrated label, 1:50/1:100/1:200 presets, disabled Calibrate…) + `ScaleCalibration` data model in project files
+- [ ] Real scale calibration flow (pick two points, enter distance → pixelsPerUnit) — later, see ROADMAP
+
 ## Milestone 0.1.x — hardening (only after manual verification)
 
 - [ ] Error toasts instead of `alert()` for load failures
