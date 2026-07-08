@@ -24,7 +24,7 @@ Instead of integrating with every app, TraceLayer sits above all of them. If you
 
 ## Status
 
-Early but functional. The 0.1 MVP plus most of the 0.2 "make tracing pleasant" milestone is implemented: sheets, Ghost Mode, image import/snapshot, pen/eraser, undo/redo, text notes and callouts (with image anchoring), sheet navigation, image lock, and save/load — see the feature list below. `npm run typecheck` and `npm run build` pass; the app runs via `npm run dev` / `npm run start` (no packaged installer yet).
+Early but functional. The 0.1 MVP plus most of the 0.2 "make tracing pleasant" milestone is implemented: sheets, Ghost Mode, image import/snapshot, pen/eraser, undo/redo, text notes and callouts (with image anchoring), sheet navigation, image lock, and save/load — see the feature list below. `npm run typecheck` and `npm run build` pass; the app runs via `npm run dev` / `npm run start`, and a Windows portable `.exe` can be built with `npm run dist:win` (no installer yet).
 
 The main outstanding work is **manual verification on Windows** — especially Ghost Mode click-through over real applications — plus measured scale calibration and paper rotation. See [TASKS.md](TASKS.md) for the honest checklist and [HANDOFF.md](HANDOFF.md) for the current state and known issues.
 
@@ -102,6 +102,7 @@ Other scripts:
 ```bash
 npm run build      # typecheck + build renderer and main process
 npm run typecheck  # type-check only
+npm run dist:win   # build Windows portable .exe into release/
 ```
 
 ---
@@ -184,7 +185,7 @@ Near-term ideas:
 * Reference/compare workflows
 * Before/after visual comparison
 * Better multi-monitor behavior
-* Packaging as portable `.exe` and installer
+* NSIS installer packaging (portable `.exe` exists)
 
 Future research:
 
