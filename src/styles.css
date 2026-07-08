@@ -468,7 +468,13 @@ body,
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 5px;
+  /* UI chrome must never be clipped by the window edge: cap the width to the
+     viewport and wrap into extra rows (growing upward from the bottom) when
+     the window is narrower than one full row. Every control stays reachable. */
+  max-width: calc(100vw - 16px);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 5px;
   padding: 6px 10px;
   border-radius: 12px;
   background: rgba(246, 240, 227, 0.96);
@@ -630,6 +636,8 @@ body,
   bottom: calc(100% + 12px);
   right: -8px;
   width: 230px;
+  /* Popovers are chrome too: never wider than the window. */
+  max-width: calc(100vw - 12px);
   padding: 12px;
   border-radius: 12px;
   background: rgba(246, 240, 227, 0.98);

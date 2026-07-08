@@ -2,9 +2,13 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: anchoring, image lock, nav direction, sheet sound)
+**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: + toolbar responsiveness)
 
 ## Current state
+
+Latest: **Toolbar responsiveness fix.** The toolbar was a fixed, centered, single-row flexbox with no width cap — a window narrower than the row clipped both ends off-screen (html/body have `overflow: hidden`). CSS-only fix in `.toolbar`: `max-width: calc(100vw - 16px)`, `flex-wrap: wrap`, `justify-content: center`; it stays bottom-center and grows upward into extra rows when the window is narrow, so every control (New Sheet, tools, sheet nav, Ghost, settings, …) stays visible and clickable at any window size. Popovers got `max-width: calc(100vw - 12px)` for the same reason. No markup/logic changes; Ghost Mode's `.toolbar` hover contract untouched. A new **UI chrome rule** is documented in ARCHITECTURE.md: toolbar, rulers and window controls are chrome — never clipped, transformed or hidden by sheet content (chrome z-order: sheets/active group ≤ 10, drawing surface 20, ruler 30, toolbar 50). `npm run typecheck` and `npm run build` pass.
+
+Earlier state:
 
 Latest: **Annotation anchoring + image lock + sheet-nav direction fix + New Sheet sound.**
 
