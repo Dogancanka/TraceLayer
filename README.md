@@ -10,7 +10,7 @@ TraceLayer is **not** a plugin, not a CAD app, not a PDF editor, not a browser e
 
 No backend. No auth. No cloud. No telemetry. Everything stays local.
 <p align="center">
-  <a href="https://github.com/Dogancanka/TraceLayer/releases/latest/download/TraceLayer-0.1.0-portable.exe">
+  <a href="https://github.com/Dogancanka/TraceLayer/releases/tag/v0.1.0-alpha">
     <strong>Download TraceLayer for Windows</strong>
   </a>
 </p>
