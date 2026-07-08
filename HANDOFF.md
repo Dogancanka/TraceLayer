@@ -2,11 +2,11 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: bottom-center compact dock)
+**Last updated:** 2026-07-08 (Windows portable packaging)
 
 ## Current state
 
-Latest addition: **project files remember the sheet size.** Saving writes an optional `window: { width, height }` (CSS px) into the JSON; loading resizes the window to it via a new `set-window-size` IPC (main clamps to window minimums and the display work area). Content is window-center-relative, so restoring the saved size makes drawings/notes line up with the paper edges as saved. Additive optional field — schema stays v3, older files load unchanged.
+Latest addition: **Windows portable packaging.** `electron-builder` is installed as a dev dependency, `npm run dist:win` builds the app and packages one Windows x64 portable target, and artifacts go to `release/` as `TraceLayer-0.1.0-portable.exe`. No NSIS installer, code signing, auto-update, telemetry, backend, auth, cloud, network feature, macOS support, Ghost Mode behavior, preload, renderer behavior, or project schema changes were added.
 
 Earlier: **Bottom bar is now a compact bottom-center dock.** The full-width bar left large empty blank areas on both sides of the content. CSS-only fix on `.toolbar`: `left: 50%; transform: translateX(-50%); width: fit-content; max-width: calc(100vw - 16px)` — the dock hugs its content, sits bottom-center, no stretching, no spacer zones, independent of paper/window width. The collapsed pill is bottom-center too. The transform is fine for the popovers (they're `position: absolute` relative to their `.settings-wrap`/`.tool-wrap` anchors, not `fixed`). Everything else from the previous pass holds:
 
@@ -124,7 +124,7 @@ Earlier changes:
 - Edge-resizing a transparent frameless window on Windows is historically finicky in Electron; unverified.
 - Paper rotation (0.2 item): not implemented — needs pointer-coordinate mapping design so drawing works on a rotated stage.
 - Pen pressure: not implemented (optional 0.2 item).
-- No packaging/installer — runs via `npm run dev` / `npm run start` only.
+- Portable Windows packaging exists via `npm run dist:win`; the generated `.exe` is written to `release/`. No installer, code signing, or auto-update exists yet.
 
 ## Known issues / sharp edges
 

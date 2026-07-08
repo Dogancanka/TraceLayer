@@ -62,7 +62,8 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [ ] Remember window position/size between launches (local file, no cloud)
 - [ ] Guard against huge imported images (warn on multi-MB data URLs)
 - [ ] App icon
-- [ ] Packaging with electron-builder (portable exe / NSIS installer)
+- [x] Packaging with electron-builder: Windows portable `.exe` output to `release/`
+- [ ] NSIS installer packaging (later; do not add before portable/Ghost Mode verification)
 
 ## Markup + sheet navigation (2026-07-07)
 
