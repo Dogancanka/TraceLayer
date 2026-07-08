@@ -178,6 +178,13 @@ export interface ProjectFile {
   images: ImageItem[];
   /** Drawing scale (målestok); absent in older files. */
   scale?: ScaleCalibration;
+  /**
+   * Window (= sheet area) size in CSS px when the project was saved; absent
+   * in older files. Applied on load so window-center-relative content lines
+   * up with the paper edges the way it was saved. Optional/additive — no
+   * schema version bump needed, older loaders ignore it.
+   */
+  window?: { width: number; height: number };
   /** Optional, reserved for future PDF pages. Absent in current files. */
   pages?: DocumentPages;
 }

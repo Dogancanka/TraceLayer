@@ -488,7 +488,16 @@ export default function App() {
   );
 
   const saveProject = useCallback(async () => {
-    const project: ProjectFile = { version: SCHEMA_VERSION, opacity, papers, images, scale };
+    const project: ProjectFile = {
+      version: SCHEMA_VERSION,
+      opacity,
+      papers,
+      images,
+      scale,
+      // Sheet area = window size; saved so loading restores the same sheet
+      // dimensions (content is window-center-relative).
+      window: { width: window.innerWidth, height: window.innerHeight },
+    };
     await window.traceLayer.saveProject(JSON.stringify(project, null, 2));
   }, [opacity, papers, images, scale]);
 
@@ -506,6 +515,14 @@ export default function App() {
       }
       pushHistory();
       const project = normalizeProject(parsed);
+      // Restore the sheet size the project was saved with (main clamps to
+      // window minimums / display size) so content lines up with the paper.
+      if (
+        typeof project.window?.width === 'number' &&
+        typeof project.window?.height === 'number'
+      ) {
+        window.traceLayer.setWindowSize(project.window.width, project.window.height);
+      }
       setPapers(project.papers);
       setImages(project.images);
       setActiveSheetId(project.papers[project.papers.length - 1].id);

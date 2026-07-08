@@ -42,6 +42,7 @@ All channels defined in `electron/main.ts`, exposed via `electron/preload.ts`:
 | `import-image` | invoke | Open dialog, read PNG/JPG, return data URL (or null) |
 | `save-project` | invoke | Save dialog + write JSON string, returns success bool |
 | `load-project` | invoke | Open dialog + read JSON string (or null) |
+| `set-window-size` | send | Resize window to a project's saved sheet size (clamped) |
 | `close-app` | send | Quit |
 
 The preload's `api` object type (`TraceLayerApi`) is imported type-only by `src/global.d.ts`, so renderer and preload cannot drift.
@@ -121,6 +122,8 @@ Plain React state in `src/App.tsx` — no state library (deliberate; do not add 
 ```
 
 Annotation `x/y`/`bubble`/`target` are in the anchor's space: window-center px for `"sheet"`, image-local px for `"image"` (see "Annotation anchoring" above).
+
+A save also writes an optional `window: { width, height }` — the sheet-area (window) size in CSS px at save time. Loading applies it via the `set-window-size` IPC (clamped to window minimums and the display's work area) so window-center-relative content lines up with the paper edges the way it was saved. Additive/optional: no schema version bump, older files simply don't have it.
 
 Images are embedded as data URLs so a project file is fully self-contained. Fine for now; large images make large files (see HANDOFF.md known issues).
 

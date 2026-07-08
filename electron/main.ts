@@ -185,6 +185,18 @@ app.whenReady().then(() => {
     },
   );
 
+  // Resize to a project's saved sheet size (load-project flow). Clamped to
+  // the window minimums and the current display's work area; keeps position.
+  ipcMain.on('set-window-size', (_event, width: number, height: number) => {
+    if (!win || !Number.isFinite(width) || !Number.isFinite(height)) return;
+    const area = screen.getDisplayMatching(win.getBounds()).workAreaSize;
+    const [minW, minH] = win.getMinimumSize();
+    win.setSize(
+      Math.round(Math.min(Math.max(width, minW), area.width)),
+      Math.round(Math.min(Math.max(height, minH), area.height)),
+    );
+  });
+
   // Hide = minimize. The overlay leaves the screen but the app keeps
   // running; restore from the taskbar. Deliberately not app.quit().
   ipcMain.on('hide-window', () => {
