@@ -24,7 +24,7 @@ TraceLayer is **transparent tracing paper for the screen**: a standalone, univer
 - Stack: **Electron + React + TypeScript + Vite**. Do not swap frameworks.
 - Main process code lives in `electron/`, renderer in `src/`. IPC goes through `electron/preload.ts` via `contextBridge` only — never enable `nodeIntegration`, never disable `contextIsolation`.
 - Ghost Mode state is owned by the **main process** (`applyGhostMode` in `electron/main.ts`). The renderer mirrors it. Keep it that way: the global shortcut must keep working when the window is click-through.
-- Project save files are plain JSON, versioned (`version: 1`). If you change the format, bump the version and keep loading old versions working.
+- Project save files are plain JSON, versioned (`SCHEMA_VERSION` in `src/types.ts`, currently 3). If you change the format, bump the version and keep loading old versions working (`normalizeProject()`); purely additive optional fields may skip the bump if documented.
 
 ## Workflow duties
 
