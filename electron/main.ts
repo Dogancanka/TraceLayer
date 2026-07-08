@@ -29,15 +29,15 @@ function applyGhostMode(ghost: boolean): void {
 function createWindow(): void {
   // Always start centered at a fixed 800×500 (no persisted bounds — a
   // predictable overlay position beats restoring wherever it was left).
-  // minHeight 500 is a hard floor: the left toolbox is designed to fit all
-  // controls without scrolling at 500px window height, so the bar can never
-  // be clipped no matter how small the window is resized.
+  // minWidth 760 is a hard floor: the full-width bottom control bar is
+  // designed to fit all controls in one row at 760px window width, so the
+  // bar can never be clipped no matter how small the window is resized.
   win = new BrowserWindow({
     width: 800,
     height: 500,
     center: true,
-    minWidth: 360,
-    minHeight: 500,
+    minWidth: 760,
+    minHeight: 320,
     transparent: true,
     frame: false,
     hasShadow: false,

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ScaleCalibration } from '../types';
 
-// Keep in sync with .paper-sheet inset in styles.css (18px 18px 18px 112px —
-// the wide left margin makes room for the left toolbox chrome).
+// Keep in sync with .paper-sheet inset in styles.css (18px 18px 52px 18px —
+// the bottom margin makes room for the full-width control bar chrome).
 const TOP = 18;
 const RIGHT = 18;
-const BOTTOM = 18;
-const LEFT = 112;
+const BOTTOM = 52;
+const LEFT = 18;
 const THICKNESS = 16;
 
 /** CSS reference pixel density; real-world sizes are approximate until measured calibration exists. */

@@ -5,8 +5,6 @@ import {
   CalloutIcon,
   CameraIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ChevronUpIcon,
   DropArrow,
   DropletIcon,
@@ -142,17 +140,18 @@ export function Toolbar({
           onClick={() => setCollapsed(false)}
           title="Show controls"
         >
-          <ChevronRightIcon />
+          <ChevronUpIcon />
           <span>TraceLayer</span>
         </button>
       </div>
     );
   }
 
-  // Left toolbox: ONE compact column of icon buttons, grouped top-to-bottom:
-  // sheet/import/snapshot → drawing/text/callout → navigation/delete →
-  // scale/save/settings → view/window. Sized to fit entirely (no scrolling)
-  // within the 500px minimum window height — see .toolbar in styles.css.
+  // Full-width bottom bar: ONE compact row of icon buttons, grouped
+  // left-to-right: sheet/import/snapshot → drawing/text/callout →
+  // navigation/delete → scale/save/settings → view/window. Sized to fit
+  // entirely (no wrapping/scrolling) within the 760px minimum window width —
+  // see .toolbar in styles.css. Tool option dots float above their button.
   return (
     <div className="toolbar">
       <div className="toolbar-grip" title="Drag to move window">
@@ -190,40 +189,42 @@ export function Toolbar({
 
       <div className="toolbar-sep" />
 
-      <button
-        type="button"
-        className={`icon-btn${tool === 'pen' ? ' active-tool' : ''}`}
-        onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
-        disabled={ghost}
-        title="Pen: draw on the active sheet"
-      >
-        <PenIcon />
-      </button>
-      {tool === 'pen' && (
-        <div className="pen-options">
-          {PEN_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`color-dot${penColor === color ? ' active' : ''}`}
-              style={{ background: color }}
-              onClick={() => onPenColorChange(color)}
-              title={`Pen color ${color}`}
-            />
-          ))}
-          {PEN_WIDTHS.map((width) => (
-            <button
-              key={width}
-              type="button"
-              className={`width-dot${penWidth === width ? ' active' : ''}`}
-              onClick={() => onPenWidthChange(width)}
-              title={`Pen width ${width} px`}
-            >
-              <span style={{ width: width + 2, height: width + 2 }} />
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="tool-wrap">
+        <button
+          type="button"
+          className={`icon-btn${tool === 'pen' ? ' active-tool' : ''}`}
+          onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
+          disabled={ghost}
+          title="Pen: draw on the active sheet"
+        >
+          <PenIcon />
+        </button>
+        {tool === 'pen' && (
+          <div className="pen-options">
+            {PEN_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot${penColor === color ? ' active' : ''}`}
+                style={{ background: color }}
+                onClick={() => onPenColorChange(color)}
+                title={`Pen color ${color}`}
+              />
+            ))}
+            {PEN_WIDTHS.map((width) => (
+              <button
+                key={width}
+                type="button"
+                className={`width-dot${penWidth === width ? ' active' : ''}`}
+                onClick={() => onPenWidthChange(width)}
+                title={`Pen width ${width} px`}
+              >
+                <span style={{ width: width + 2, height: width + 2 }} />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className={`icon-btn${tool === 'eraser' ? ' active-tool' : ''}`}
@@ -242,29 +243,31 @@ export function Toolbar({
       >
         <NoteIcon />
       </button>
-      <button
-        type="button"
-        className={`icon-btn${tool === 'callout' ? ' active-tool' : ''}`}
-        onClick={() => onToolChange(tool === 'callout' ? 'select' : 'callout')}
-        disabled={ghost}
-        title="Callout: click the active sheet to place a bubble with an arrow"
-      >
-        <CalloutIcon />
-      </button>
-      {tool === 'callout' && (
-        <div className="pen-options">
-          {PEN_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`color-dot${calloutColor === color ? ' active' : ''}`}
-              style={{ background: color }}
-              onClick={() => onCalloutColorChange(color)}
-              title={`Callout color ${color}`}
-            />
-          ))}
-        </div>
-      )}
+      <div className="tool-wrap">
+        <button
+          type="button"
+          className={`icon-btn${tool === 'callout' ? ' active-tool' : ''}`}
+          onClick={() => onToolChange(tool === 'callout' ? 'select' : 'callout')}
+          disabled={ghost}
+          title="Callout: click the active sheet to place a bubble with an arrow"
+        >
+          <CalloutIcon />
+        </button>
+        {tool === 'callout' && (
+          <div className="pen-options">
+            {PEN_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot${calloutColor === color ? ' active' : ''}`}
+                style={{ background: color }}
+                onClick={() => onCalloutColorChange(color)}
+                title={`Callout color ${color}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className="icon-btn"
@@ -495,7 +498,7 @@ export function Toolbar({
         onClick={() => setCollapsed(true)}
         title="Collapse controls"
       >
-        <ChevronLeftIcon />
+        <ChevronDownIcon />
       </button>
       <button type="button" className="icon-btn" onClick={onHide} title="Hide overlay (minimize)">
         <MinusIcon />

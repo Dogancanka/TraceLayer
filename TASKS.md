@@ -104,6 +104,14 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] ARCHITECTURE.md: UI chrome rule updated (toolbox independent of sheet content) + new "Sheet stack visibility" rule (never reorder the paint order)
 - [ ] Manual pass: image on Sheet 1 → add Sheets 2–3 → image still faintly visible; navigate down → uppers fade, image clear; toolbox usable at small window sizes; collapse/expand pill; popovers open right; Ghost Mode hover still works over the toolbox
 
+## Full-width bottom bar (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] Left toolbox reverted: control bar is back at the bottom, full window width, one compact row, centered content; collapse pill bottom-left
+- [x] Never clipped independent of window size: minWidth 760 floor matches the row's ~740px worst case (budget documented on `.toolbar`); minHeight 320
+- [x] Pen/callout option dots float in a popover above their button (never widen the row); scale/settings popovers open above their buttons again
+- [x] Paper margins back to 18/18/52/18 with Ruler.tsx constants synced
+- [ ] Manual pass: resize to 760 wide → whole bar visible in one row; pen/callout dots pop above the button; popovers open upward
+
 ## Single-column toolbox + fixed startup size (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
 
 - [x] Toolbox reworked from 2 columns to one compact 56px column (13px icons); all controls fit without scrolling at the minimum window height — height budget documented on `.toolbar` in styles.css
