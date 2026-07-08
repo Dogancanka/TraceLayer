@@ -67,14 +67,33 @@ body,
   inset: 0;
 }
 
+/* One group per sheet: the paper div plus that sheet's images/strokes/notes.
+   Same box as the layer stack, so child layout is unchanged. */
+.sheet-group {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Sheets stacked ABOVE the active one: faded so the active sheet (and
+   everything below it) stays clearly visible, and click-through so the
+   active sheet's content is editable. The paint order itself never changes —
+   no z-index lifting; that scrambled the visual stack. Restored to full
+   opacity as soon as the top sheet is active again. */
+.sheet-group.above-active {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
 .paper-sheet {
   position: absolute;
-  /* Extra room at the bottom so the control bar sits below the sheet,
-     not on top of it. Keep in sync with .toolbar bottom offset. */
-  inset: 18px 18px 64px;
-  /* Translucent like real tracing paper: layers underneath show through
-     dimmed, so a new sheet visibly covers previous work. */
-  background-color: rgba(247, 242, 230, 0.84);
+  /* Room at the bottom for the full-width control bar (UI chrome).
+     Keep in sync with the LEFT/TOP/RIGHT/BOTTOM constants in Ruler.tsx. */
+  inset: 18px 18px 52px 18px;
+  /* Translucent like real tracing paper: content on lower sheets stays
+     faintly visible through the stack (two sheets on top still leave
+     ~20% show-through), while a new sheet still visibly dims it. */
+  background-color: rgba(247, 242, 230, 0.55);
   /* Subtle fiber grain + soft vignette to read as tracing paper. */
   background-image:
     repeating-linear-gradient(
@@ -139,6 +158,8 @@ body,
 .drawing-surface {
   position: absolute;
   inset: 0;
+  /* Above the lifted active sheet group (10), below the ruler (30). */
+  z-index: 20;
 }
 
 .drawing-surface.pen {
@@ -180,10 +201,9 @@ body,
   user-select: none;
 }
 
+/* Position (top/left) is set inline by Ruler.tsx from its margin constants. */
 .ruler-corner {
   position: absolute;
-  top: 2px;
-  left: 2px;
   width: 16px;
   height: 16px;
   display: flex;
@@ -194,13 +214,31 @@ body,
   overflow: hidden;
 }
 
-/* ---- Pen options (visible while the pen tool is active) ---- */
+/* ---- Tool options (pen colors/widths, callout colors) ----
+
+   Float in a small strip ABOVE the active tool's button instead of inline in
+   the bar, so they never change the bar's width. .tool-wrap is the relative
+   anchor around the button. */
+
+.tool-wrap {
+  position: relative;
+  display: flex;
+}
 
 .pen-options {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 2px;
+  padding: 5px 7px;
+  border-radius: 9px;
+  background: rgba(246, 240, 227, 0.98);
+  border: 1px solid rgba(160, 148, 122, 0.55);
+  box-shadow: 0 4px 14px rgba(60, 50, 30, 0.25);
+  white-space: nowrap;
 }
 
 .toolbar .pen-options .color-dot {
@@ -261,6 +299,17 @@ body,
 .image-item.selected {
   outline: 2px dashed rgba(70, 110, 200, 0.9);
   outline-offset: 2px;
+}
+
+/* Locked images: selectable (to unlock) but not draggable — no grab cursor,
+   and a solid outline instead of the movable dashed one. */
+.image-item.locked,
+.image-item.locked:active {
+  cursor: default;
+}
+
+.image-item.locked.selected {
+  outline-style: solid;
 }
 
 .stage.ghost .image-item.selected {
@@ -431,19 +480,31 @@ body,
   cursor: crosshair;
 }
 
-/* ---- Toolbar (warm beige, paper-like) ---- */
+/* ---- Toolbar (compact bottom-center dock; warm beige, paper-like) ----
+
+   UI chrome: independent of paper/window content size. A compact dock,
+   bottom-center, sized to its content only (no full-width stretching, no
+   spacer zones) — ONE row of icon buttons grouped by thin separators. All
+   controls fit without wrapping or scrolling at the minimum window width
+   (760px, enforced by minWidth in electron/main.ts) — if you add a control,
+   verify the row still fits ~740px worst case (image selected). Tool option
+   dots (pen/callout) float in a small popover ABOVE their button, so they
+   never widen the row. Keep the root `toolbar` class — the Ghost Mode hover
+   check in App.tsx matches `.toolbar`. */
 
 .toolbar {
   position: fixed;
-  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
+  bottom: 8px;
   z-index: 50;
+  width: fit-content;
+  max-width: calc(100vw - 16px);
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-radius: 12px;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: 10px;
   background: rgba(246, 240, 227, 0.96);
   border: 1px solid rgba(160, 148, 122, 0.55);
   box-shadow:
@@ -456,7 +517,8 @@ body,
 .toolbar-grip {
   -webkit-app-region: drag;
   color: rgba(74, 66, 52, 0.5);
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1;
   padding: 2px 6px;
   cursor: grab;
 }
@@ -490,9 +552,9 @@ body,
 .toolbar .icon-btn {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 6px;
-  min-width: 27px;
+  gap: 2px;
+  padding: 4px;
+  min-width: 21px;
   justify-content: center;
 }
 
@@ -509,15 +571,11 @@ body,
   opacity: 0.55;
 }
 
-.toolbar .scale-label {
-  font-size: 10px;
-  line-height: 1;
-}
-
 .toolbar-sep {
+  flex: none;
   width: 1px;
   align-self: stretch;
-  margin: 3px 2px;
+  margin: 2px 3px;
   background: rgba(160, 148, 122, 0.45);
 }
 
@@ -532,8 +590,8 @@ body,
   color: #fff;
 }
 
-/* Collapsed state: a small pill handle, still `.toolbar` so the Ghost Mode
-   hover check keeps working. */
+/* Collapsed state: a small pill handle, bottom-center like the dock, still
+   `.toolbar` so the Ghost Mode hover check keeps working. */
 .toolbar-collapsed {
   padding: 3px;
 }
@@ -543,52 +601,20 @@ body,
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  padding: 4px 12px;
+  padding: 6px 8px;
   background: transparent;
   color: rgba(74, 66, 52, 0.75);
 }
 
-/* ---- Sheet controller (navigate the sheet stack) ---- */
+/* ---- Sheet navigation label ---- */
 
-.sheet-controller {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 2px;
-}
-
-.sheet-controller .sheet-label {
-  font-size: 11px;
+.toolbar .sheet-label {
+  font-size: 10px;
+  line-height: 1.2;
   color: #4a4234;
-  min-width: 54px;
   text-align: center;
   white-space: nowrap;
-}
-
-.sheet-controller .icon-btn {
-  padding: 4px 2px;
-  min-width: 20px;
-}
-
-/* ---- Page controller (placeholder for future PDF pages) ---- */
-
-.page-controller {
-  display: flex;
-  align-items: center;
-  gap: 2px;
   padding: 0 2px;
-}
-
-.page-controller .page-label {
-  font-size: 11px;
-  color: rgba(74, 66, 52, 0.6);
-  min-width: 30px;
-  text-align: center;
-}
-
-.page-controller .icon-btn {
-  padding: 4px 2px;
-  min-width: 20px;
 }
 
 /* ---- Settings popover ---- */
@@ -598,11 +624,15 @@ body,
   display: flex;
 }
 
+/* Opens ABOVE its button. Popovers are chrome too: never taller than the
+   window. */
 .settings-popover {
   position: absolute;
   bottom: calc(100% + 12px);
   right: -8px;
   width: 230px;
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
   padding: 12px;
   border-radius: 12px;
   background: rgba(246, 240, 227, 0.98);
@@ -617,8 +647,8 @@ body,
   -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 4px;
+  gap: 2px;
+  padding: 0 1px;
   color: rgba(74, 66, 52, 0.7);
   font-size: 11px;
 }
@@ -628,7 +658,9 @@ body,
 }
 
 .opacity-control input[type='range'] {
-  width: 76px;
+  flex: none;
+  width: 56px;
+  height: 12px;
   accent-color: #4a7dd6;
 }
 
@@ -646,9 +678,10 @@ body,
   font-size: 12px;
 }
 
-/* Compact and centered on its button so it cannot be pushed off-window. */
+/* Wide enough for the three presets plus Clear on one row; centered on its
+   button so it cannot be pushed off-window. */
 .scale-popover {
-  width: 168px;
+  width: 224px;
   right: auto;
   left: 50%;
   transform: translateX(-50%);
@@ -656,6 +689,7 @@ body,
 
 .scale-presets {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
 }
 

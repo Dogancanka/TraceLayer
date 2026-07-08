@@ -1,42 +1,9 @@
 import { app, BrowserWindow, desktopCapturer, dialog, globalShortcut, ipcMain, screen } from 'electron';
-import * as fsSync from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 let win: BrowserWindow | null = null;
 let ghostMode = false;
-
-// ---- Window position/size persistence (local file, no cloud) ----
-
-interface WindowState {
-  x?: number;
-  y?: number;
-  width: number;
-  height: number;
-}
-
-const windowStateFile = (): string => path.join(app.getPath('userData'), 'window-state.json');
-
-function loadWindowState(): WindowState | null {
-  try {
-    const raw = JSON.parse(fsSync.readFileSync(windowStateFile(), 'utf-8')) as WindowState;
-    if (typeof raw.width === 'number' && typeof raw.height === 'number' && raw.width >= 360 && raw.height >= 280) {
-      return raw;
-    }
-  } catch {
-    // first run or unreadable state file — fall back to defaults
-  }
-  return null;
-}
-
-function saveWindowState(): void {
-  if (!win || win.isMinimized()) return;
-  try {
-    fsSync.writeFileSync(windowStateFile(), JSON.stringify(win.getBounds()), 'utf-8');
-  } catch {
-    // non-fatal: next launch just uses defaults
-  }
-}
 
 const MIME_BY_EXT: Record<string, string> = {
   '.png': 'image/png',
@@ -60,14 +27,17 @@ function applyGhostMode(ghost: boolean): void {
 }
 
 function createWindow(): void {
-  const saved = loadWindowState();
+  // Always start centered at a fixed 800×500 (no persisted bounds — a
+  // predictable overlay position beats restoring wherever it was left).
+  // minWidth 760 is a hard floor: the full-width bottom control bar is
+  // designed to fit all controls in one row at 760px window width, so the
+  // bar can never be clipped no matter how small the window is resized.
   win = new BrowserWindow({
-    width: saved?.width ?? 960,
-    height: saved?.height ?? 720,
-    x: saved?.x,
-    y: saved?.y,
-    minWidth: 360,
-    minHeight: 280,
+    width: 800,
+    height: 500,
+    center: true,
+    minWidth: 760,
+    minHeight: 320,
     transparent: true,
     frame: false,
     hasShadow: false,
@@ -101,7 +71,6 @@ function createWindow(): void {
   win.on('restore', reassertMouseState);
   win.on('show', reassertMouseState);
 
-  win.on('close', saveWindowState);
   win.on('closed', () => {
     win = null;
   });
@@ -215,6 +184,18 @@ app.whenReady().then(() => {
       }
     },
   );
+
+  // Resize to a project's saved sheet size (load-project flow). Clamped to
+  // the window minimums and the current display's work area; keeps position.
+  ipcMain.on('set-window-size', (_event, width: number, height: number) => {
+    if (!win || !Number.isFinite(width) || !Number.isFinite(height)) return;
+    const area = screen.getDisplayMatching(win.getBounds()).workAreaSize;
+    const [minW, minH] = win.getMinimumSize();
+    win.setSize(
+      Math.round(Math.min(Math.max(width, minW), area.width)),
+      Math.round(Math.min(Math.max(height, minH), area.height)),
+    );
+  });
 
   // Hide = minimize. The overlay leaves the screen but the app keeps
   // running; restore from the taskbar. Deliberately not app.quit().

@@ -73,8 +73,51 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Sheet previous/next navigation: toolbar buttons + "Sheet i/N" label, Alt+Up/Down and PageUp/PageDown shortcuts; introduces `activeSheetId` as the target for new strokes/text/callouts/imports, independent of the sheet stack's fixed z-order (see ARCHITECTURE.md "Active sheet vs. top sheet")
 - [x] Data model: `PaperSheet` gained `textBoxes`, `callouts`, and a reserved (unused) `calibration` placeholder; `ProjectFile.version` bumped to a real schema version (`SCHEMA_VERSION = 2`); `normalizeProject()` upgrades v1 files and older/partial v2 files with safe defaults
 - [x] Undo/redo: text box/callout create, delete, drag, and edit-session-start all push history the same way image drags already did — no changes needed to the history engine since the new arrays live inside `papers` (already snapshotted). Ctrl+Z/Y are suppressed while a text field has focus so native in-field text undo isn't hijacked.
-- [ ] Known simplification: when the active sheet isn't the topmost one, its highlight ring can be mostly covered by sheets stacked above it (translucent tracing-paper stacking is unchanged). The toolbar's "Sheet i/N" label is the reliable indicator; a more visible non-topmost-sheet affordance is future work if this turns out to matter in practice.
+- [x] Known simplification: when the active sheet isn't the topmost one, its highlight ring can be mostly covered by sheets stacked above it — **resolved in the 2026-07-08 bugfix pass**: the active sheet's group is lifted with a visual z-index (data order unchanged).
 - [ ] Not done (out of scope for this pass): resizing text boxes/callouts, per-textbox color/style, multiple callout arrow targets, per-sheet calibration UI (the `calibration` field is a placeholder only)
+
+## Bugfix pass (2026-07-08)
+
+- [x] Fix reversed typing in text boxes/callouts: contentEditable divs are now uncontrolled (no React text child; external changes sync to `innerText` only while unfocused) — re-rendering the child on every keystroke reset the caret to the start
+- [x] Rulers stay visible/aligned after New Sheet: random per-sheet tilt disabled (`newSheet()` → tilt 0; `normalizeProject()` flattens old tilts); `tilt` stays in the schema for future paper rotation
+- [x] Sheet navigation visibly switches sheets: per-sheet `.sheet-group` wrapper; active group lifted with z-index 10 (visual only, stack order/data unchanged); drawing surface raised to z 20, ruler stays 30
+- [x] Delete-sheet trash button next to the sheet controller: confirm only when the sheet has content, disabled for the last remaining sheet, sheet underneath becomes active, sheet's images removed too, undoable
+- [x] Scale popover fits all buttons (width 224px, wrapping preset row)
+- [x] Settings icon replaced with a real gear (feather cog outline, inline SVG, no dependency); TrashIcon added in the same style
+- [ ] Manual click-through of these fixes in a running window (typing in a note/callout, New Sheet + rulers, sheet nav visual lift, delete sheet, popover layout)
+
+## Anchoring + image lock + nav direction + sheet sound (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] New Sheet sound: `src/assets/audio/new_sheet_sound.wav` plays on the New Sheet button only; settings-popover toggle, persisted in localStorage (`tracelayer.newSheetSound`), fails silently
+- [x] Sheet navigation direction: Up = sheet above, Down = sheet underneath (was inverted); tooltips + Alt+Up/Down / PageUp/PageDown match; disabled states follow
+- [x] Annotation anchoring (`src/anchor.ts`): text boxes/callouts anchor to the sheet (default) or to an imported image; image-anchored annotations follow the image's move/scale/rotate; placement anchors to the selected image if any; deleting an image (or its sheet) re-anchors its annotations to the sheet in place; old files migrate to sheet anchors; future shapes reuse the same `Anchor` type
+- [x] Schema v3: `anchor` on annotations, `locked` on images; `normalizeProject()` upgrade path kept for v1/v2
+- [x] Image lock/pin: toolbar lock toggle on the selected image; locked images can't be moved/scaled/rotated/deleted (still selectable/unlockable); state saves/loads; undoable
+- [ ] Manual pass: anchor a note + callout to an image, move/scale/rotate the image and confirm they follow; delete the image and confirm annotations stay put on the sheet; lock an image and try to drag/wheel/delete it; toggle the sheet sound off/on and confirm persistence across restarts; save a v3 project and reload it; load an old v1/v2 file
+
+## Sheet stack visibility + left toolbox (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] Sheet translucency: background alpha 0.84 → 0.55 so lower-sheet content stays faintly visible through stacked sheets (~20% under two sheets, was ~2.6%)
+- [x] Removed the active-sheet z-index lift (it reordered the visual stack and buried lower content); sheets above the active one now fade (opacity 0.25) + become click-through instead — paint order never changes
+- [x] Bottom wrapping toolbar replaced by a collapsible left-side 2-column icon toolbox: grouped (sheet/import/snapshot, drawing/text/callout+undo/redo, navigation/delete, scale/save/load/settings, view/window), beige style + tooltips kept, `toolbar` class kept for the Ghost Mode hover contract, viewport-capped height with vertical scroll, popovers open right as position: fixed
+- [x] Paper left margin 112px (toolbox chrome doesn't cover the left ruler); bottom margin back to 18px; Ruler.tsx constants synced
+- [x] ARCHITECTURE.md: UI chrome rule updated (toolbox independent of sheet content) + new "Sheet stack visibility" rule (never reorder the paint order)
+- [ ] Manual pass: image on Sheet 1 → add Sheets 2–3 → image still faintly visible; navigate down → uppers fade, image clear; toolbox usable at small window sizes; collapse/expand pill; popovers open right; Ghost Mode hover still works over the toolbox
+
+## Full-width bottom bar (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] Left toolbox reverted: control bar is back at the bottom, full window width, one compact row, centered content; collapse pill bottom-left
+- [x] Never clipped independent of window size: minWidth 760 floor matches the row's ~740px worst case (budget documented on `.toolbar`); minHeight 320
+- [x] Pen/callout option dots float in a popover above their button (never widen the row); scale/settings popovers open above their buttons again
+- [x] Paper margins back to 18/18/52/18 with Ruler.tsx constants synced
+- [ ] Manual pass: resize to 760 wide → whole bar visible in one row; pen/callout dots pop above the button; popovers open upward
+
+## Single-column toolbox + fixed startup size (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] Toolbox reworked from 2 columns to one compact 56px column (13px icons); all controls fit without scrolling at the minimum window height — height budget documented on `.toolbar` in styles.css
+- [x] Removed the disabled PDF page-controller placeholder from the toolbox (kept reserved in types/ROADMAP) and the inline scale label (tooltip + popover still show the value) to fit the budget
+- [x] Window always starts centered at fixed 800×500; window-state persistence removed; minHeight 500 hard floor so the toolbox can never be clipped; minWidth 360
+- [ ] Manual pass: resize to minimum and confirm the full toolbox is visible without scroll; restart and confirm centered 800×500
 
 ## Later
 

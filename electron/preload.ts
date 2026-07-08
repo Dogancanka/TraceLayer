@@ -36,6 +36,15 @@ const api = {
   /** Open a file dialog and read a project JSON. Resolves to the raw text, or null. */
   loadProject: (): Promise<string | null> => ipcRenderer.invoke('load-project'),
 
+  /**
+   * Resize the window (e.g. to the sheet size a project was saved with, so
+   * window-center-relative content lines up with the paper edges again).
+   * Main clamps to the window's minimum size.
+   */
+  setWindowSize: (width: number, height: number): void => {
+    ipcRenderer.send('set-window-size', width, height);
+  },
+
   /** Minimize the overlay to the taskbar without quitting. */
   hideWindow: (): void => {
     ipcRenderer.send('hide-window');

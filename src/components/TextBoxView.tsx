@@ -4,20 +4,36 @@ import type { TextBox } from '../types';
 
 interface TextBoxViewProps {
   box: TextBox;
+  /** Resolved screen (window-center) position — box.x/y mapped out of the box's anchor space by the caller. */
+  position: { x: number; y: number };
   selected: boolean;
   ghost: boolean;
   onSelect: (id: string) => void;
+  /** Non-positional changes (text). */
   onChange: (id: string, patch: Partial<TextBox>) => void;
+  /** Position change, in screen coords; the caller converts back to anchor space. */
+  onMove: (id: string, screenPoint: { x: number; y: number }) => void;
   /** Called once when a drag starts, or when editing begins (undo snapshot). */
   onGestureStart: () => void;
 }
 
 /** Movable, editable note bubble. Drag the grip to move; click the body to edit. */
-export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestureStart }: TextBoxViewProps) {
+export function TextBoxView({ box, position, selected, ghost, onSelect, onChange, onMove, onGestureStart }: TextBoxViewProps) {
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; origX: number; origY: number } | null>(
     null,
   );
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // The contentEditable div is uncontrolled: while it has focus the browser
+  // owns its DOM. Writing state back into it on every keystroke resets the
+  // caret to the start (text came out reversed), so external text changes
+  // (undo/redo, project load, initial mount) sync here only while unfocused.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el && document.activeElement !== el && el.innerText !== box.text) {
+      el.innerText = box.text;
+    }
+  }, [box.text]);
 
   // Focus immediately if mounted already selected — the case right after
   // placing a new box. Deliberately mount-only (not keyed on `selected`) so
@@ -32,14 +48,14 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
     e.stopPropagation();
     onSelect(box.id);
     onGestureStart();
-    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, origX: box.x, origY: box.y };
+    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, origX: position.x, origY: position.y };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onGripPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
-    onChange(box.id, {
+    onMove(box.id, {
       x: drag.origX + (e.clientX - drag.startX),
       y: drag.origY + (e.clientY - drag.startY),
     });
@@ -55,7 +71,7 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
     <div
       className={`textbox${selected ? ' selected' : ''}`}
       style={{
-        transform: `translate(-50%, -50%) translate(${box.x}px, ${box.y}px)`,
+        transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
         width: box.width,
       }}
     >
@@ -66,7 +82,6 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
         ref={contentRef}
         className="textbox-content"
         contentEditable={!ghost}
-        suppressContentEditableWarning
         data-placeholder="Note…"
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -74,9 +89,7 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
         }}
         onFocus={onGestureStart}
         onInput={(e) => onChange(box.id, { text: e.currentTarget.innerText })}
-      >
-        {box.text}
-      </div>
+      />
     </div>
   );
 }

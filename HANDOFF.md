@@ -2,9 +2,62 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (Markup annotations + sheet navigation)
+**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: bottom-center compact dock)
 
 ## Current state
+
+Latest addition: **project files remember the sheet size.** Saving writes an optional `window: { width, height }` (CSS px) into the JSON; loading resizes the window to it via a new `set-window-size` IPC (main clamps to window minimums and the display work area). Content is window-center-relative, so restoring the saved size makes drawings/notes line up with the paper edges as saved. Additive optional field — schema stays v3, older files load unchanged.
+
+Earlier: **Bottom bar is now a compact bottom-center dock.** The full-width bar left large empty blank areas on both sides of the content. CSS-only fix on `.toolbar`: `left: 50%; transform: translateX(-50%); width: fit-content; max-width: calc(100vw - 16px)` — the dock hugs its content, sits bottom-center, no stretching, no spacer zones, independent of paper/window width. The collapsed pill is bottom-center too. The transform is fine for the popovers (they're `position: absolute` relative to their `.settings-wrap`/`.tool-wrap` anchors, not `fixed`). Everything else from the previous pass holds:
+
+Earlier: **Control bar at the bottom — one row, never clipped.** The bar is one compact row, same beige style/groups/tooltips. It stays fully visible independent of window size: **`minWidth: 760`** in `electron/main.ts` is a hard floor matched to the row's worst-case width (~740px, image selected) — no wrapping, no scrolling, no clipping (budget documented on `.toolbar` in styles.css; re-verify when adding controls). Pen/callout option dots now float in a small popover **above** their button (`.tool-wrap`/`.pen-options`), so activating a tool never widens the row. Scale/settings popovers open above their buttons again (absolute, viewport-height-capped). Collapse pill sits bottom-left. Startup unchanged: always centered 800×500; `minHeight` now 320. Paper margins back to `18px 18px 52px 18px` with `Ruler.tsx` constants synced (left ruler back at the left edge). Ghost Mode untouched (`.toolbar` hover contract intact). `npm run typecheck` and `npm run build` pass; not clicked through in a running window.
+
+Earlier state:
+
+Latest: **Toolbox reworked to a single compact column; window always starts centered at 800×500.**
+
+- **Single-column toolbox**: the 2-column grid read poorly — now one compact 56px-wide column (13px icons, tight padding, same beige style/groups/tooltips). **No scrolling, ever**: the whole column fits (~460px worst case — image selected or tool option dots open) within the minimum window height. The disabled PDF page-controller placeholder row was removed from the toolbox to make the budget (multi-page stays reserved via `DocumentPages` in types.ts); the scale button no longer shows its inline label (value lives in the tooltip + popover). Adding any toolbox control requires re-checking the height budget — see the comment on `.toolbar` in styles.css.
+- **Fixed startup geometry** (`electron/main.ts`): window always opens centered at 800×500. `window-state.json` persistence removed entirely. `minHeight: 500` is a hard floor tied to the toolbox budget (bar can never be clipped at any allowed window size); `minWidth: 360`; still freely resizable above that.
+- Popovers unchanged in behavior (open right, `position: fixed`), repositioned for the narrower toolbox (left: 80px).
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode untouched (`.toolbar` class contract intact). Not clicked through in a running window.
+
+Earlier state:
+
+Latest: **Sheet stack visibility fix + bottom toolbar replaced by a left toolbox.**
+
+- **Sheet stack visibility**: two causes fixed. (1) Sheet background alpha was 0.84 — an image under two sheets kept only ~2.6% visibility, effectively disappearing; now 0.55, leaving ~20% show-through under two sheets. (2) The active-sheet z-index lift (navigating to Sheet 2 of 3 painted it *above* Sheet 3) scrambled the visual stack and buried lower content; removed entirely. New model: paint order never changes; sheets **above** the active one get `.sheet-group.above-active` — faded to 0.25 opacity and `pointer-events: none` — so the active sheet is clearly visible/editable and everything below it stays faintly visible, like lifting the upper sheets off a real stack. Fully reversible: activating the top sheet restores all sheets. See ARCHITECTURE.md "Sheet stack visibility".
+- **Left toolbox** (`Toolbar.tsx` + `.toolbar` in styles.css): the bottom wrapping bar is gone. The toolbar is now a fixed left-side 2-column icon grid, grouped by separators: sheet/import/snapshot → pen/eraser/text/callout/undo/redo (option dots span the row while a tool is active) → sheet label/up/down/delete + the disabled PDF page placeholder → scale/save/load/settings → paper-opacity + image-opacity/lock + ghost/collapse/hide/close. Same beige style, icons and tooltips. Height caps at the viewport and scrolls vertically on very short windows; width is fixed and small, so nothing clips at any window size. Collapses to a small "TraceLayer ›" pill in the same corner. The root keeps the `toolbar` class (Ghost Mode hover contract — unchanged). Popovers (scale/settings) now open to the **right** as `position: fixed` elements — absolute children would be clipped by the toolbox's scroll overflow; this requires the toolbox to stay transform-free.
+- **Paper margins**: sheets now sit at `inset: 18px 18px 18px 112px` — wide left margin so the toolbox never covers the left ruler; bottom margin shrank from 64px (old bottom bar) to 18px. `Ruler.tsx` constants (`LEFT/TOP/RIGHT/BOTTOM`) updated in sync, and the ruler corner badge is positioned inline from those constants.
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode logic untouched. Not clicked through in a running window; manual check items added to TASKS.md (especially: image on Sheet 1 visible after adding Sheets 2–3 and navigating, and toolbox usability at small window sizes).
+
+Earlier state:
+
+Latest: **Toolbar responsiveness fix.** The toolbar was a fixed, centered, single-row flexbox with no width cap — a window narrower than the row clipped both ends off-screen (html/body have `overflow: hidden`). CSS-only fix in `.toolbar`: `max-width: calc(100vw - 16px)`, `flex-wrap: wrap`, `justify-content: center`; it stays bottom-center and grows upward into extra rows when the window is narrow, so every control (New Sheet, tools, sheet nav, Ghost, settings, …) stays visible and clickable at any window size. Popovers got `max-width: calc(100vw - 12px)` for the same reason. No markup/logic changes; Ghost Mode's `.toolbar` hover contract untouched. A new **UI chrome rule** is documented in ARCHITECTURE.md: toolbar, rulers and window controls are chrome — never clipped, transformed or hidden by sheet content (chrome z-order: sheets/active group ≤ 10, drawing surface 20, ruler 30, toolbar 50). `npm run typecheck` and `npm run build` pass.
+
+Earlier state:
+
+Latest: **Annotation anchoring + image lock + sheet-nav direction fix + New Sheet sound.**
+
+- **Annotation anchoring** (`src/anchor.ts`, `Anchor` in `src/types.ts`, resolved in `LayerStack`): text boxes and callouts store coordinates in an *anchor space* — the sheet (default) or an imported image. Image-anchored annotations follow the image's move/scale/rotate automatically, because rendering always resolves through the live image transform. Placement default: image selected → new annotation anchors to it; otherwise sheet. Selecting the text/callout tool now deliberately keeps an image selection alive (it's the anchor target). Views work purely in screen space (`position`/`bubblePosition`/`targetPosition` + `onMove`); all conversion lives in `LayerStack`. Deleting an image (directly or via Delete Sheet) bakes anchored annotations' screen positions and re-anchors them to the sheet (`detachAnnotationsFromImage`). Old files migrate to sheet anchors. Future shapes must reuse this pattern — see ARCHITECTURE.md "Annotation anchoring".
+- **Schema v3** (`SCHEMA_VERSION = 3`): adds `anchor` on text boxes/callouts and `locked` on images; `normalizeProject()` upgrades v1/v2 with sheet anchors and `locked: false`. Loader accepts versions 1–3.
+- **Image lock** (lock button in the toolbar while an image is selected): locked images ignore drag/wheel/Shift+wheel and the Delete key, stay selectable (to unlock), show a solid (not dashed) selection outline and no grab cursor. Lock state persists in the project file and is undoable.
+- **Sheet navigation direction fixed**: Up (button, Alt+Up, PageUp) = sheet *above* (later in the stack); Down (button, Alt+Down, PageDown) = sheet *underneath*. Previously inverted. Tooltips updated; disabled states follow (Up disabled on the top sheet, Down on the bottom one).
+- **New Sheet sound** (`src/assets/audio/new_sheet_sound.wav`, imported as a Vite asset URL — see `src/assets.d.ts`): plays only on the New Sheet button, wrapped so any audio failure is silent. Toggle in the settings popover ("New Sheet sound: On/Off"), persisted in `localStorage` (`tracelayer.newSheetSound`), default on.
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode untouched. Not manually clicked through — the anchor math (translate → rotate → scale, matching ImageView's CSS transform order) and lock/sound paths need a human pass (see TASKS.md).
+
+Earlier state:
+
+Latest: **Bugfix pass over the markup + sheet-navigation work.** Six fixes, no new features:
+
+- **Reversed typing in notes/callouts fixed** (`TextBoxView.tsx`, `CalloutView.tsx`): the `contentEditable` divs rendered `{text}` as a React child, so every keystroke re-rendered the node and reset the caret to the start ("door" → "rood"). They are now uncontrolled: React renders no children; an effect writes `box.text`/`callout.text` into `el.innerText` only when the element is **not** focused (covers mount, undo/redo, project load). `onInput` still reads back via `innerText`. Do not reintroduce a text child there.
+- **Random sheet tilt removed** (`App.tsx`, `types.ts`): random per-sheet rotation misaligned sheet edges with the fixed corner rulers after New Sheet. `newSheet()` always creates `tilt: 0` and `normalizeProject()` flattens older files' tilts to 0 on load. The `tilt` field stays in the schema and the `--tilt` CSS var still works — re-enable only together with real paper rotation (pointer mapping). Rulers remain `z-index: 30`, above all sheet content.
+- **Sheet navigation is now visible** (`LayerStack.tsx`, `.sheet-group` in `styles.css`): each sheet plus its images/strokes/notes/callouts is wrapped in one absolutely-positioned full-window group div; the active sheet's group gets `z-index: 10`, lifting the whole sheet above later sheets. Purely visual — the `papers` array and save format never reorder. Side effect (intended): a navigated-to lower sheet's content is interactive again while active. The `.drawing-surface` gained `z-index: 20` so pen/eraser input stays above the lifted group; ruler (30) and toolbar (50) unchanged.
+- **Delete sheet** (trash button next to the sheet controller): deletes the active sheet and everything on it (its images are filtered out of `images` too). Confirms first only when the sheet has content; disabled (with explanatory tooltip) when a single sheet remains; afterwards the sheet underneath becomes active. Undoable via the normal snapshot history.
+- **Scale popover widened** (224px, presets row wraps) so 1:50/1:100/1:200/Clear all fit; still centered on its button.
+- **Settings icon is a real gear** (feather `settings` cog outline in `icons.tsx`; old one read as a sun/brightness icon). Added `TrashIcon` in the same style; still no icon dependency.
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode logic untouched (the new `.sheet-group` divs set no `pointer-events`, so they inherit `none` from `.stage.ghost` like everything else). Not yet manually clicked through in a running window — the standing manual-verification pass in TASKS.md still applies and now includes these fixes.
+
+Earlier state:
 
 Latest: **Text notes, callout bubbles with arrows, and sheet up/down navigation.**
 
@@ -80,12 +133,17 @@ Earlier changes:
 - Loading a project replaces the current document (it does push an undo snapshot first).
 - Images are embedded in project JSON as base64 data URLs → large images make large project files.
 - Load failure shows a plain `alert()`.
-- Window position/size not persisted between launches.
+- Window position/size deliberately not persisted (removed 2026-07-08): every launch starts centered at 800×500, minimum 360×500.
 - Opening DevTools docked can break window transparency — open detached if needed.
 - `Backspace` also deletes the selected image/text box/callout (same handler as `Delete`), but only when a text field doesn't have focus (so backspacing inside a note edits its text instead of deleting the note).
 - Global shortcut Ctrl+Alt+G is registered system-wide while the app runs; collides with any other app using it.
-- When the active sheet (target of new content) isn't the topmost sheet, its highlight ring can be mostly hidden behind sheets stacked above it — the tracing-paper stack itself never reorders. The toolbar's "Sheet i/N" label is the reliable indicator of which sheet is active.
+- While a lower sheet is active, the sheets above it are faded (opacity 0.25) and click-through; their content is not clickable until they're active again — navigate to a sheet to edit its content. The stack's paint order itself never changes.
+- Deleting a sheet does not restore which sheet was active on undo (the document comes back; the active-sheet pointer self-heals to the top sheet if its sheet vanished).
 - Text box/callout resizing is not implemented (height grows with content; width is fixed at creation).
+- Sheets no longer get a random tilt (it misaligned them with the corner rulers); the paper stack looks perfectly aligned until real paper rotation lands.
+- An image-anchored annotation scales its *position* with the image but not its own box size/text — zooming an image far out leaves its notes full-size at converging positions. Acceptable for now.
+- There is no UI to change an existing annotation's anchor; it's chosen at placement (image selected → image anchor) and only changes automatically when the anchor image is deleted.
+- A locked image's opacity can still be changed via the toolbar slider while selected — deliberate (opacity is a conscious act, not an accidental drag).
 
 ## How to run
 

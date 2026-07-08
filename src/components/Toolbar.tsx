@@ -5,8 +5,6 @@ import {
   CalloutIcon,
   CameraIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ChevronUpIcon,
   DropArrow,
   DropletIcon,
@@ -16,13 +14,16 @@ import {
   GhostIcon,
   ImageIcon,
   LayersPlusIcon,
+  LockIcon,
   MinusIcon,
   NoteIcon,
   PenIcon,
   RedoIcon,
   RulerIcon,
   SaveIcon,
+  TrashIcon,
   UndoIcon,
+  UnlockIcon,
   XIcon,
 } from './icons';
 
@@ -49,8 +50,17 @@ interface ToolbarProps {
   /** 0-based index of the active sheet, and how many sheets exist. */
   sheetIndex: number;
   sheetCount: number;
-  onPrevSheet: () => void;
-  onNextSheet: () => void;
+  /** Navigate to the sheet above (later in the stack) / underneath. */
+  onSheetUp: () => void;
+  onSheetDown: () => void;
+  /** Deletes the active sheet. Disabled in the UI when only one sheet exists. */
+  onDeleteSheet: () => void;
+  /** New Sheet sound preference (persisted in localStorage by the app). */
+  sheetSoundOn: boolean;
+  onToggleSheetSound: () => void;
+  /** Locked state of the selected image, or null when no image is selected. */
+  selectedImageLocked: boolean | null;
+  onToggleImageLock: () => void;
   onNewProject: () => void;
   onToolChange: (tool: Tool) => void;
   onUndo: () => void;
@@ -85,8 +95,13 @@ export function Toolbar({
   onCalloutColorChange,
   sheetIndex,
   sheetCount,
-  onPrevSheet,
-  onNextSheet,
+  onSheetUp,
+  onSheetDown,
+  onDeleteSheet,
+  sheetSoundOn,
+  onToggleSheetSound,
+  selectedImageLocked,
+  onToggleImageLock,
   onNewProject,
   onToolChange,
   onUndo,
@@ -132,12 +147,18 @@ export function Toolbar({
     );
   }
 
+  // Full-width bottom bar: ONE compact row of icon buttons, grouped
+  // left-to-right: sheet/import/snapshot → drawing/text/callout →
+  // navigation/delete → scale/save/settings → view/window. Sized to fit
+  // entirely (no wrapping/scrolling) within the 760px minimum window width —
+  // see .toolbar in styles.css. Tool option dots float above their button.
   return (
     <div className="toolbar">
       <div className="toolbar-grip" title="Drag to move window">
         ⠿
       </div>
 
+      {/* sheet / import / snapshot */}
       <button
         type="button"
         className="icon-btn"
@@ -168,40 +189,42 @@ export function Toolbar({
 
       <div className="toolbar-sep" />
 
-      <button
-        type="button"
-        className={`icon-btn${tool === 'pen' ? ' active-tool' : ''}`}
-        onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
-        disabled={ghost}
-        title="Pen: draw on the active sheet"
-      >
-        <PenIcon />
-      </button>
-      {tool === 'pen' && (
-        <div className="pen-options">
-          {PEN_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`color-dot${penColor === color ? ' active' : ''}`}
-              style={{ background: color }}
-              onClick={() => onPenColorChange(color)}
-              title={`Pen color ${color}`}
-            />
-          ))}
-          {PEN_WIDTHS.map((width) => (
-            <button
-              key={width}
-              type="button"
-              className={`width-dot${penWidth === width ? ' active' : ''}`}
-              onClick={() => onPenWidthChange(width)}
-              title={`Pen width ${width} px`}
-            >
-              <span style={{ width: width + 2, height: width + 2 }} />
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="tool-wrap">
+        <button
+          type="button"
+          className={`icon-btn${tool === 'pen' ? ' active-tool' : ''}`}
+          onClick={() => onToolChange(tool === 'pen' ? 'select' : 'pen')}
+          disabled={ghost}
+          title="Pen: draw on the active sheet"
+        >
+          <PenIcon />
+        </button>
+        {tool === 'pen' && (
+          <div className="pen-options">
+            {PEN_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot${penColor === color ? ' active' : ''}`}
+                style={{ background: color }}
+                onClick={() => onPenColorChange(color)}
+                title={`Pen color ${color}`}
+              />
+            ))}
+            {PEN_WIDTHS.map((width) => (
+              <button
+                key={width}
+                type="button"
+                className={`width-dot${penWidth === width ? ' active' : ''}`}
+                onClick={() => onPenWidthChange(width)}
+                title={`Pen width ${width} px`}
+              >
+                <span style={{ width: width + 2, height: width + 2 }} />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className={`icon-btn${tool === 'eraser' ? ' active-tool' : ''}`}
@@ -220,29 +243,31 @@ export function Toolbar({
       >
         <NoteIcon />
       </button>
-      <button
-        type="button"
-        className={`icon-btn${tool === 'callout' ? ' active-tool' : ''}`}
-        onClick={() => onToolChange(tool === 'callout' ? 'select' : 'callout')}
-        disabled={ghost}
-        title="Callout: click the active sheet to place a bubble with an arrow"
-      >
-        <CalloutIcon />
-      </button>
-      {tool === 'callout' && (
-        <div className="pen-options">
-          {PEN_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`color-dot${calloutColor === color ? ' active' : ''}`}
-              style={{ background: color }}
-              onClick={() => onCalloutColorChange(color)}
-              title={`Callout color ${color}`}
-            />
-          ))}
-        </div>
-      )}
+      <div className="tool-wrap">
+        <button
+          type="button"
+          className={`icon-btn${tool === 'callout' ? ' active-tool' : ''}`}
+          onClick={() => onToolChange(tool === 'callout' ? 'select' : 'callout')}
+          disabled={ghost}
+          title="Callout: click the active sheet to place a bubble with an arrow"
+        >
+          <CalloutIcon />
+        </button>
+        {tool === 'callout' && (
+          <div className="pen-options">
+            {PEN_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`color-dot${calloutColor === color ? ' active' : ''}`}
+                style={{ background: color }}
+                onClick={() => onCalloutColorChange(color)}
+                title={`Callout color ${color}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       <button
         type="button"
         className="icon-btn"
@@ -264,46 +289,45 @@ export function Toolbar({
 
       <div className="toolbar-sep" />
 
-      {/* Sheet navigation: which sheet in the stack new strokes/notes/imports land
-          on. Not to be confused with the (disabled) PDF page-controller below. */}
-      <div className="sheet-controller" title="Move between sheets (Alt+Up/Down, PageUp/PageDown)">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={onPrevSheet}
-          disabled={ghost || sheetIndex === 0}
-          title="Previous sheet (Alt+Up / PageUp)"
-        >
-          <ChevronUpIcon />
-        </button>
-        <span className="sheet-label">
-          Sheet {sheetIndex + 1}/{sheetCount}
-        </span>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={onNextSheet}
-          disabled={ghost || sheetIndex === sheetCount - 1}
-          title="Next sheet (Alt+Down / PageDown)"
-        >
-          <ChevronDownIcon />
-        </button>
-      </div>
-
+      {/* navigation / delete: which sheet in the stack new strokes/notes/imports
+          land on. Not to be confused with the (disabled) PDF page-controller. */}
+      <span className="sheet-label" title="Active sheet (target of new content)">
+        Sheet {sheetIndex + 1}/{sheetCount}
+      </span>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onSheetUp}
+        disabled={ghost || sheetIndex === sheetCount - 1}
+        title="Sheet above (Alt+Up / PageUp)"
+      >
+        <ChevronUpIcon />
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onSheetDown}
+        disabled={ghost || sheetIndex === 0}
+        title="Sheet underneath (Alt+Down / PageDown)"
+      >
+        <ChevronDownIcon />
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onDeleteSheet}
+        disabled={ghost || sheetCount <= 1}
+        title={sheetCount <= 1 ? 'The last sheet cannot be deleted' : 'Delete the active sheet (asks first if it has content)'}
+      >
+        <TrashIcon />
+      </button>
       <div className="toolbar-sep" />
 
-      {/* Placeholder for future multi-page (PDF) support — see DocumentPages in types.ts. */}
-      <div className="page-controller" title="Multi-page documents coming later">
-        <button type="button" className="icon-btn" disabled title="Previous page">
-          <ChevronLeftIcon />
-        </button>
-        <span className="page-label">1 / 1</span>
-        <button type="button" className="icon-btn" disabled title="Next page">
-          <ChevronRightIcon />
-        </button>
-      </div>
-
-      {/* Scale (målestok): label-only placeholder until real calibration lands. */}
+      {/* Scale (målestok): label-only placeholder until real calibration lands.
+          (The old disabled PDF page-controller placeholder was removed from the
+          toolbox to keep the single column within the 500px minimum window
+          height — multi-page support remains reserved via DocumentPages in
+          types.ts.) */}
       <div className="settings-wrap">
         <button
           type="button"
@@ -313,7 +337,6 @@ export function Toolbar({
           title={`Drawing scale (målestok): ${scale.drawingScale ?? 'uncalibrated'}`}
         >
           <RulerIcon />
-          {scale.drawingScale && <span className="scale-label">{scale.drawingScale}</span>}
           <DropArrow />
         </button>
         {openPopover === 'scale' && (
@@ -348,44 +371,6 @@ export function Toolbar({
         )}
       </div>
 
-      <div className="toolbar-sep" />
-
-      <button
-        type="button"
-        className={`icon-btn ghost-toggle${ghost ? ' active' : ''}`}
-        onClick={onToggleGhost}
-        title="Ghost Mode: clicks pass through to the app underneath (Ctrl+Alt+G)"
-      >
-        <GhostIcon />
-      </button>
-
-      <label className="opacity-control" title="Paper opacity">
-        <DropletIcon />
-        <input
-          type="range"
-          min={10}
-          max={100}
-          value={Math.round(opacity * 100)}
-          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
-          disabled={ghost}
-        />
-      </label>
-
-      {selectedImageOpacity !== null && (
-        <label className="opacity-control" title="Selected image opacity">
-          <ImageIcon />
-          <input
-            type="range"
-            min={5}
-            max={100}
-            value={Math.round(selectedImageOpacity * 100)}
-            onPointerDown={onImageGestureStart}
-            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
-            disabled={ghost}
-          />
-        </label>
-      )}
-
       <button type="button" className="icon-btn" onClick={onSave} disabled={ghost} title="Save project as JSON">
         <SaveIcon />
       </button>
@@ -415,6 +400,13 @@ export function Toolbar({
               title="Clear all sheets, drawings and images and start over"
             >
               New Project (clear workspace)
+            </button>
+            <button
+              type="button"
+              onClick={onToggleSheetSound}
+              title="Play a paper sound when a new sheet is added"
+            >
+              New Sheet sound: {sheetSoundOn ? 'On' : 'Off'}
             </button>
             <div className="settings-hints">
               <div className="settings-hints-title">Shortcuts</div>
@@ -449,6 +441,57 @@ export function Toolbar({
 
       <div className="toolbar-sep" />
 
+      {/* view / window: ghost, opacity, image controls, collapse/hide/close */}
+      <label className="opacity-control" title="Paper opacity">
+        <DropletIcon />
+        <input
+          type="range"
+          min={10}
+          max={100}
+          value={Math.round(opacity * 100)}
+          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
+          disabled={ghost}
+        />
+      </label>
+
+      {selectedImageOpacity !== null && (
+        <label className="opacity-control" title="Selected image opacity">
+          <ImageIcon />
+          <input
+            type="range"
+            min={5}
+            max={100}
+            value={Math.round(selectedImageOpacity * 100)}
+            onPointerDown={onImageGestureStart}
+            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
+            disabled={ghost}
+          />
+        </label>
+      )}
+      {selectedImageLocked !== null && (
+        <button
+          type="button"
+          className={`icon-btn${selectedImageLocked ? ' active-tool' : ''}`}
+          onClick={onToggleImageLock}
+          disabled={ghost}
+          title={
+            selectedImageLocked
+              ? 'Unlock image (locked images cannot be moved, scaled, rotated or deleted)'
+              : 'Lock image against accidental move/scale/rotate/delete'
+          }
+        >
+          {selectedImageLocked ? <LockIcon /> : <UnlockIcon />}
+        </button>
+      )}
+
+      <button
+        type="button"
+        className={`icon-btn ghost-toggle${ghost ? ' active' : ''}`}
+        onClick={onToggleGhost}
+        title="Ghost Mode: clicks pass through to the app underneath (Ctrl+Alt+G)"
+      >
+        <GhostIcon />
+      </button>
       <button
         type="button"
         className="icon-btn"

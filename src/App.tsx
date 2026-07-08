@@ -13,14 +13,19 @@ import {
   SCHEMA_VERSION,
   nextId,
   normalizeProject,
+  sheetAnchor,
   uncalibratedScale,
 } from './types';
-import type { Callout, ImageItem, PaperSheet, ProjectFile, ScaleCalibration, Selection, Stroke, TextBox, Tool } from './types';
+import type { Anchor, Callout, ImageItem, PaperSheet, ProjectFile, ScaleCalibration, Selection, Stroke, TextBox, Tool } from './types';
+import { anchorToScreen, screenToAnchor } from './anchor';
+import newSheetSoundUrl from './assets/audio/new_sheet_sound.wav';
 
-const randomTilt = () => (Math.random() - 0.5) * 1.6;
-const newSheet = (tilt = 0): PaperSheet => ({
+// Sheets are always tilt 0 for now: random per-sheet rotation misaligned
+// sheet edges with the fixed corner rulers. Re-enable only together with
+// proper paper rotation (pointer-coordinate mapping, see TASKS.md 0.2).
+const newSheet = (): PaperSheet => ({
   id: nextId(),
-  tilt,
+  tilt: 0,
   strokes: [],
   textBoxes: [],
   callouts: [],
@@ -34,6 +39,34 @@ interface DocSnapshot {
 }
 
 const HISTORY_LIMIT = 50;
+
+/** localStorage key for the New Sheet sound preference ('on' / 'off'). */
+const SHEET_SOUND_PREF_KEY = 'tracelayer.newSheetSound';
+
+/**
+ * Before an image is removed, its anchored annotations get their current
+ * screen position baked in and are re-anchored to the sheet — they stay
+ * exactly where they were instead of jumping or pointing at a dead image id.
+ */
+const detachAnnotationsFromImage = (paperList: PaperSheet[], img: ImageItem): PaperSheet[] =>
+  paperList.map((p) => ({
+    ...p,
+    textBoxes: p.textBoxes.map((t) =>
+      t.anchor.kind === 'image' && t.anchor.imageId === img.id
+        ? { ...t, ...anchorToScreen({ x: t.x, y: t.y }, t.anchor, [img]), anchor: sheetAnchor() }
+        : t,
+    ),
+    callouts: p.callouts.map((c) =>
+      c.anchor.kind === 'image' && c.anchor.imageId === img.id
+        ? {
+            ...c,
+            bubble: anchorToScreen(c.bubble, c.anchor, [img]),
+            target: anchorToScreen(c.target, c.anchor, [img]),
+            anchor: sheetAnchor(),
+          }
+        : c,
+    ),
+  }));
 
 export default function App() {
   const [ghost, setGhost] = useState(false);
@@ -50,6 +83,25 @@ export default function App() {
   // z-order (a user can navigate to an earlier sheet without reshuffling the
   // stack) — see ARCHITECTURE.md for why the stack itself never reorders.
   const [activeSheetId, setActiveSheetId] = useState<string>(() => papers[0].id);
+  const [sheetSoundOn, setSheetSoundOn] = useState(() => {
+    try {
+      return localStorage.getItem(SHEET_SOUND_PREF_KEY) !== 'off';
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleSheetSound = useCallback(() => {
+    setSheetSoundOn((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SHEET_SOUND_PREF_KEY, next ? 'on' : 'off');
+      } catch {
+        // Preference just won't persist; the toggle still works this session.
+      }
+      return next;
+    });
+  }, []);
 
   // ---- Undo/redo ----
   // History lives in refs (no re-render per snapshot); historyVersion bumps
@@ -105,8 +157,12 @@ export default function App() {
     },
     [papers],
   );
-  const prevSheet = useCallback(() => goToSheetIndex(activeIndex - 1), [goToSheetIndex, activeIndex]);
-  const nextSheet = useCallback(() => goToSheetIndex(activeIndex + 1), [goToSheetIndex, activeIndex]);
+  // Stack order: papers[0] is the bottom sheet, the last entry the top one.
+  // "Up" goes to the sheet above (later in the array), "Down" to the sheet
+  // underneath — matching the physical stack, the toolbar arrows, and the
+  // Alt+Up/Down / PageUp/PageDown shortcuts.
+  const sheetUp = useCallback(() => goToSheetIndex(activeIndex + 1), [goToSheetIndex, activeIndex]);
+  const sheetDown = useCallback(() => goToSheetIndex(activeIndex - 1), [goToSheetIndex, activeIndex]);
 
   // ---- Ghost Mode (owned by the main process; renderer mirrors it) ----
   useEffect(() => window.traceLayer.onGhostModeChanged(setGhost), []);
@@ -164,30 +220,36 @@ export default function App() {
         return;
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selection && !editing) {
-        pushHistory();
         if (selection.kind === 'image') {
-          setImages((prev) => prev.filter((img) => img.id !== selection.id));
+          const img = images.find((i) => i.id === selection.id);
+          if (!img || img.locked) return; // locked images survive stray Delete presses
+          pushHistory();
+          setPapers((prev) => detachAnnotationsFromImage(prev, img));
+          setImages((prev) => prev.filter((i) => i.id !== img.id));
         } else if (selection.kind === 'text') {
+          pushHistory();
           setPapers((prev) => prev.map((p) => ({ ...p, textBoxes: p.textBoxes.filter((t) => t.id !== selection.id) })));
         } else {
+          pushHistory();
           setPapers((prev) => prev.map((p) => ({ ...p, callouts: p.callouts.filter((c) => c.id !== selection.id) })));
         }
         setSelection(null);
         return;
       }
+      // Up = the sheet above (later in the stack), Down = the sheet underneath.
       if (!editing && (e.key === 'PageUp' || (e.altKey && e.key === 'ArrowUp'))) {
         e.preventDefault();
-        prevSheet();
+        sheetUp();
         return;
       }
       if (!editing && (e.key === 'PageDown' || (e.altKey && e.key === 'ArrowDown'))) {
         e.preventDefault();
-        nextSheet();
+        sheetDown();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [ghost, selection, undo, redo, pushHistory, prevSheet, nextSheet]);
+  }, [ghost, selection, images, undo, redo, pushHistory, sheetUp, sheetDown]);
 
   // ---- Actions ----
   const toggleGhost = useCallback(() => {
@@ -196,16 +258,60 @@ export default function App() {
 
   const changeTool = useCallback((next: Tool) => {
     setTool(next);
-    if (next !== 'select') setSelection(null);
+    // Pen/eraser don't use the selection — clear it. Text/callout keep an
+    // image selection: the selected image is the anchor target for the
+    // annotation about to be placed (see onStagePointerDown).
+    setSelection((sel) =>
+      next === 'select' || ((next === 'text' || next === 'callout') && sel?.kind === 'image') ? sel : null,
+    );
   }, []);
 
   const addPaper = useCallback(() => {
     pushHistory();
-    const sheet = newSheet(randomTilt());
+    const sheet = newSheet();
     setPapers((prev) => [...prev, sheet]);
     setActiveSheetId(sheet.id); // new sheet becomes the active target too
     setSelection(null); // whatever was selected is now under the new sheet
-  }, [pushHistory]);
+    if (sheetSoundOn) {
+      // Best-effort paper sound; never let audio problems block the sheet.
+      try {
+        void new Audio(newSheetSoundUrl).play().catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+  }, [pushHistory, sheetSoundOn]);
+
+  // Deletes the active sheet with everything on it (strokes, notes, callouts,
+  // images). Never deletes the last sheet — the toolbar disables the button.
+  const deleteSheet = useCallback(() => {
+    if (papers.length <= 1) return;
+    const sheet = activeSheet;
+    const hasContent =
+      sheet.strokes.length > 0 ||
+      sheet.textBoxes.length > 0 ||
+      sheet.callouts.length > 0 ||
+      images.some((img) => img.paperId === sheet.id);
+    if (hasContent) {
+      const ok = window.confirm(
+        `Delete sheet ${activeIndex + 1}? Its drawings, notes and images are removed. (Ctrl+Z undoes this.)`,
+      );
+      if (!ok) return;
+    }
+    pushHistory();
+    let remaining = papers.filter((p) => p.id !== sheet.id);
+    // Annotations on *other* sheets may be anchored to this sheet's images —
+    // bake their positions and re-anchor them to the sheet before the images go.
+    for (const img of images) {
+      if (img.paperId === sheet.id) remaining = detachAnnotationsFromImage(remaining, img);
+    }
+    setPapers(remaining);
+    setImages((prev) => prev.filter((img) => img.paperId !== sheet.id));
+    // The sheet that was underneath is the natural next target (it just got
+    // revealed); when the bottom sheet was deleted, take the new bottom one.
+    setActiveSheetId(remaining[Math.max(0, activeIndex - 1)].id);
+    setSelection(null);
+  }, [papers, images, activeSheet, activeIndex, pushHistory]);
 
   // Full reset, unlike New Sheet. Undoable (snapshot is pushed first).
   const newProject = useCallback(() => {
@@ -236,6 +342,7 @@ export default function App() {
       scale: 1,
       rotation: 0,
       opacity: 1,
+      locked: false,
       paperId: activeSheet.id, // imports land on the active sheet
     };
     setImages((prev) => [...prev, img]);
@@ -258,6 +365,7 @@ export default function App() {
       scale: 1 / shot.scaleFactor,
       rotation: 0,
       opacity: 1,
+      locked: false,
       paperId: activeSheet.id,
     };
     setImages((prev) => [...prev, img]);
@@ -270,6 +378,16 @@ export default function App() {
   const updateImage = useCallback((id: string, patch: Partial<ImageItem>) => {
     setImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...patch } : img)));
   }, []);
+
+  // Lock/unlock the selected image. Locked images ignore move/scale/rotate
+  // gestures (ImageView) and the Delete key, but stay selectable. Undoable.
+  const toggleImageLock = useCallback(() => {
+    if (selection?.kind !== 'image') return;
+    const img = images.find((i) => i.id === selection.id);
+    if (!img) return;
+    pushHistory();
+    updateImage(img.id, { locked: !img.locked });
+  }, [selection, images, pushHistory, updateImage]);
 
   const addStroke = useCallback(
     (points: number[]) => {
@@ -322,9 +440,26 @@ export default function App() {
       if (e.button !== 0) return;
       if (tool === 'text' || tool === 'callout') {
         const point = { x: e.clientX - window.innerWidth / 2, y: e.clientY - window.innerHeight / 2 };
+        // Anchoring default: a selected image pins the new annotation to that
+        // image (it follows the image's move/scale/rotate); otherwise the
+        // annotation is anchored to the sheet. Coordinates are stored in
+        // anchor space, so screen points convert on the way in.
+        const anchor: Anchor =
+          selection?.kind === 'image' && images.some((img) => img.id === selection.id)
+            ? { kind: 'image', imageId: selection.id }
+            : sheetAnchor();
         pushHistory();
         if (tool === 'text') {
-          const box: TextBox = { id: nextId(), sheetId: activeSheet.id, x: point.x, y: point.y, width: DEFAULT_TEXTBOX_WIDTH, text: '' };
+          const local = screenToAnchor(point, anchor, images);
+          const box: TextBox = {
+            id: nextId(),
+            sheetId: activeSheet.id,
+            x: local.x,
+            y: local.y,
+            width: DEFAULT_TEXTBOX_WIDTH,
+            text: '',
+            anchor,
+          };
           setPapers((prev) => prev.map((p) => (p.id === activeSheet.id ? { ...p, textBoxes: [...p.textBoxes, box] } : p)));
           setSelection({ kind: 'text', id: box.id });
         } else {
@@ -332,9 +467,14 @@ export default function App() {
             id: nextId(),
             sheetId: activeSheet.id,
             text: '',
-            bubble: { x: point.x - DEFAULT_BUBBLE_OFFSET, y: point.y - DEFAULT_BUBBLE_OFFSET },
-            target: point,
+            bubble: screenToAnchor(
+              { x: point.x - DEFAULT_BUBBLE_OFFSET, y: point.y - DEFAULT_BUBBLE_OFFSET },
+              anchor,
+              images,
+            ),
+            target: screenToAnchor(point, anchor, images),
             style: { color: calloutColor },
+            anchor,
           };
           setPapers((prev) => prev.map((p) => (p.id === activeSheet.id ? { ...p, callouts: [...p.callouts, callout] } : p)));
           setSelection({ kind: 'callout', id: callout.id });
@@ -344,11 +484,20 @@ export default function App() {
       }
       setSelection(null);
     },
-    [tool, activeSheet, calloutColor, pushHistory],
+    [tool, activeSheet, calloutColor, selection, images, pushHistory],
   );
 
   const saveProject = useCallback(async () => {
-    const project: ProjectFile = { version: SCHEMA_VERSION, opacity, papers, images, scale };
+    const project: ProjectFile = {
+      version: SCHEMA_VERSION,
+      opacity,
+      papers,
+      images,
+      scale,
+      // Sheet area = window size; saved so loading restores the same sheet
+      // dimensions (content is window-center-relative).
+      window: { width: window.innerWidth, height: window.innerHeight },
+    };
     await window.traceLayer.saveProject(JSON.stringify(project, null, 2));
   }, [opacity, papers, images, scale]);
 
@@ -358,7 +507,7 @@ export default function App() {
     try {
       const parsed = JSON.parse(raw) as ProjectFile;
       if (
-        (parsed.version !== 1 && parsed.version !== 2) ||
+        (parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3) ||
         !Array.isArray(parsed.papers) ||
         !Array.isArray(parsed.images)
       ) {
@@ -366,6 +515,14 @@ export default function App() {
       }
       pushHistory();
       const project = normalizeProject(parsed);
+      // Restore the sheet size the project was saved with (main clamps to
+      // window minimums / display size) so content lines up with the paper.
+      if (
+        typeof project.window?.width === 'number' &&
+        typeof project.window?.height === 'number'
+      ) {
+        window.traceLayer.setWindowSize(project.window.width, project.window.height);
+      }
       setPapers(project.papers);
       setImages(project.images);
       setActiveSheetId(project.papers[project.papers.length - 1].id);
@@ -433,8 +590,13 @@ export default function App() {
         onCalloutColorChange={setCalloutColor}
         sheetIndex={activeIndex}
         sheetCount={papers.length}
-        onPrevSheet={prevSheet}
-        onNextSheet={nextSheet}
+        onSheetUp={sheetUp}
+        onSheetDown={sheetDown}
+        onDeleteSheet={deleteSheet}
+        sheetSoundOn={sheetSoundOn}
+        onToggleSheetSound={toggleSheetSound}
+        selectedImageLocked={selectedImage?.locked ?? null}
+        onToggleImageLock={toggleImageLock}
         onNewProject={newProject}
         onToolChange={changeTool}
         onUndo={undo}

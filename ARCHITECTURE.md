@@ -42,6 +42,7 @@ All channels defined in `electron/main.ts`, exposed via `electron/preload.ts`:
 | `import-image` | invoke | Open dialog, read PNG/JPG, return data URL (or null) |
 | `save-project` | invoke | Save dialog + write JSON string, returns success bool |
 | `load-project` | invoke | Open dialog + read JSON string (or null) |
+| `set-window-size` | send | Resize window to a project's saved sheet size (clamped) |
 | `close-app` | send | Quit |
 
 The preload's `api` object type (`TraceLayerApi`) is imported type-only by `src/global.d.ts`, so renderer and preload cannot drift.
@@ -50,13 +51,17 @@ The preload's `api` object type (`TraceLayerApi`) is imported type-only by `src/
 
 Plain React state in `src/App.tsx` — no state library (deliberate; do not add one):
 
-- `papers: PaperSheet[]` — the stack; each sheet has a small random `tilt` and its own `strokes`, `textBoxes`, `callouts`, and a reserved `calibration` placeholder. New sheets mount with the `paper-drop` CSS animation ("placed on top").
-- `images: ImageItem[]` — imported images with `x/y/scale/rotation/opacity` and a `paperId`. Positioned relative to window center. Drag = move, wheel = scale, Shift+wheel = rotate, Delete = remove (see `src/components/ImageView.tsx`).
+- `papers: PaperSheet[]` — the stack; each sheet has its own `strokes`, `textBoxes`, `callouts`, and a reserved `calibration` placeholder (`tilt` exists in the schema but is always 0 until real paper rotation lands). New sheets mount with the `paper-drop` CSS animation ("placed on top") and, if enabled in settings (persisted in `localStorage`), a paper sound (`src/assets/audio/new_sheet_sound.wav`, best-effort/fail-silent).
+- `images: ImageItem[]` — imported images with `x/y/scale/rotation/opacity/locked` and a `paperId`. Positioned relative to window center. Drag = move, wheel = scale, Shift+wheel = rotate, Delete = remove (see `src/components/ImageView.tsx`). A **locked** image (toolbar lock button while selected) ignores all of those — it stays selectable so it can be unlocked, and its opacity can still be changed deliberately.
 - `opacity` — CSS opacity on the stage; the toolbar is outside the stage so it stays readable. Per-image opacity multiplies on top.
 - `tool` — `select | pen | eraser | text | callout`. Pen/eraser mount `DrawingSurface`, a full-stage input layer; strokes commit to the **active** sheet on pointer-up, the eraser removes whole strokes it touches (active sheet only). Text/callout place a new item on the active sheet on the next stage click, then switch back to `select`.
 - `activeSheetId` — which sheet in `papers` new strokes/text/callouts/imports land on. Independent of z-order: navigating with the sheet controller (prev/next, or Alt+Up/Down / PageUp/PageDown) does **not** reorder the stack, it only changes the target sheet. Self-heals to the top sheet if the id ever goes stale (e.g. after an undo removes that sheet). Not persisted in the project file — loading a project sets it to the top sheet.
 - `selection: Selection | null` — `{ kind: 'image' | 'text' | 'callout', id }`. Replaces the old image-only `selectedId`; Delete/Backspace and the per-item drag/edit UI branch on `kind`.
 - `ghost` — mirror of main-process state.
+
+**UI chrome rule:** Toolbar, rulers and window controls are UI chrome — independent of sheet content and the paper/window size. They must not be clipped, transformed or hidden by sheet content. Concretely: chrome lives outside/above the sheet z-range (drawing surface `z-index: 20`, ruler `30`, toolbar `50`; sheet groups have no z-index at all), is never a child of a sheet group, and always fits the window. The control bar is a **full-width bottom bar** with a single compact row of icon buttons (`.toolbar` in styles.css — the class name is load-bearing, the Ghost Mode hover check matches it) that collapses to a small bottom-left pill. It never wraps, scrolls, or clips by design: the whole row fits within the **minimum window width of 760px** enforced in `electron/main.ts` (~740px worst case, image selected). Adding a control to the bar requires re-verifying that budget. Pen/callout option dots float in a small popover above their button so an active tool never widens the row; scale/settings popovers open above their buttons. The paper keeps a 52px bottom margin (`.paper-sheet` inset, synced with `BOTTOM` in `Ruler.tsx`) so the bar sits below the sheet, not on top of it.
+
+**Sheet stack visibility:** sheets must read as real stacked tracing paper. Sheet background alpha is 0.55, so content two sheets down still shows through (~20%). The paint order of the stack **never changes**; when the active sheet is not the topmost one, the sheets *above* it fade (`.sheet-group.above-active`, opacity 0.25) and become click-through (`pointer-events: none`) so the active sheet is clearly visible and editable — navigating sheets is a pure visual-state change, never a reorder, and returning to the top sheet restores every sheet to full opacity. (An earlier z-index-lift approach reordered the visual stack and made lower-sheet content disappear behind multiple sheet layers; don't reintroduce it.)
 
 **Layering:** `LayerStack` renders sheets and their contents interleaved: sheet → its images → its strokes → its text boxes/callouts, next sheet on top of all of that. Sheets are slightly translucent, so lower layers show through dimmed (real tracing-paper behavior). Items under a newer sheet are automatically non-interactive because the sheet div hit-tests above them — this applies to text boxes and callouts exactly as it already did to images. The corner ruler stays above all of this (`.ruler` z-index 30); the toolbar is outside the stage entirely.
 
@@ -66,24 +71,29 @@ Plain React state in `src/App.tsx` — no state library (deliberate; do not add 
 
 **Stroke geometry** (`src/stroke.ts`): flat `[x0, y0, x1, y1, …]` arrays, window-center-relative px. Rendered as SVG paths smoothed with quadratic midpoints, via a centered zero-size `overflow: visible` svg — no resize handling needed. Eraser hit-test is point-to-segment distance.
 
-**Text boxes** (`src/components/TextBoxView.tsx`): a small paper-like box with a drag grip (⠿) and a `contentEditable` body. Position (`x`/`y`) is window-center-relative, same convention as strokes/images; width is stored, height grows with content. Text is read back via `innerText` (not `textContent`) so multi-line notes round-trip through save/load correctly.
+**Text boxes** (`src/components/TextBoxView.tsx`): a small paper-like box with a drag grip (⠿) and a `contentEditable` body. Width is stored, height grows with content. Text is read back via `innerText` (not `textContent`) so multi-line notes round-trip through save/load correctly.
 
 **Callouts** (`src/components/CalloutView.tsx` + the per-sheet `callout-arrow-layer` svg in `LayerStack`): a bubble (same grip + `contentEditable` pattern as text boxes) plus a separately draggable arrow-target handle. The arrow line itself is drawn once per sheet in a shared svg (like the stroke layer), from `bubble` to `target`, with an arrowhead marker. `style.color` drives the bubble border, arrow, and target-handle color.
 
+**Annotation anchoring** (`src/anchor.ts`, `Anchor` in `src/types.ts`): every text box and callout stores its coordinates in an *anchor space* — either the sheet (window-center px, the default and the migration default for older files) or an imported image (px in the image's local space, before its scale/rotation). `anchorToScreen` / `screenToAnchor` convert between anchor space and screen space, applying the image transform in the same order ImageView's CSS does (translate → rotate → scale). The conversion happens in exactly one place, `LayerStack`: views (`TextBoxView`, `CalloutView`) work purely in resolved screen coordinates (`position` / `bubblePosition` / `targetPosition` props) and report drags in screen space via `onMove`; `LayerStack` converts on the way in and out. Because rendering always resolves through the live `images` array, image-anchored annotations follow the image with **zero extra bookkeeping** when it moves/scales/rotates. Placement default: if an image is selected when the text/callout tool places an item, it anchors to that image, otherwise to the sheet (selecting the text/callout tool deliberately keeps an image selection alive for this). Deleting an image (or its sheet) bakes anchored annotations' current screen positions and re-anchors them to the sheet (`detachAnnotationsFromImage` in `App.tsx`) so nothing jumps or orphans. Future shape annotations should reuse the same `Anchor` type and resolve-in-LayerStack pattern.
+
 ## Project file format
 
-`*.tracelayer.json`, versioned via `ProjectFile.version` (currently `SCHEMA_VERSION = 2` in `src/types.ts`). v1 files (papers with only `strokes`) and v2 files missing newer optional fields are both upgraded in memory by `normalizeProject()` when loading; a save always writes the current version. Do not remove an older version's normalization path when bumping the version further.
+`*.tracelayer.json`, versioned via `ProjectFile.version` (currently `SCHEMA_VERSION = 3` in `src/types.ts`). v1 files (papers with only `strokes`), v2 files (no `anchor`/`locked`), and files missing newer optional fields are all upgraded in memory by `normalizeProject()` when loading — annotations default to `{ "kind": "sheet" }` anchors, images to `locked: false`. A save always writes the current version. Do not remove an older version's normalization path when bumping the version further.
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "opacity": 0.85,
   "papers": [
     {
       "id": "…",
-      "tilt": 0.4,
+      "tilt": 0,
       "strokes": [{ "id": "…", "points": [0, 0, 10, 12], "color": "#3a3630", "width": 2 }],
-      "textBoxes": [{ "id": "…", "sheetId": "…", "x": 10, "y": -20, "width": 190, "text": "note" }],
+      "textBoxes": [
+        { "id": "…", "sheetId": "…", "x": 10, "y": -20, "width": 190, "text": "note",
+          "anchor": { "kind": "image", "imageId": "…" } }
+      ],
       "callouts": [
         {
           "id": "…",
@@ -91,7 +101,8 @@ Plain React state in `src/App.tsx` — no state library (deliberate; do not add 
           "text": "see this",
           "bubble": { "x": -60, "y": -80 },
           "target": { "x": 10, "y": 0 },
-          "style": { "color": "#3a3630" }
+          "style": { "color": "#3a3630" },
+          "anchor": { "kind": "sheet" }
         }
       ],
       "calibration": null
@@ -103,17 +114,22 @@ Plain React state in `src/App.tsx` — no state library (deliberate; do not add 
       "dataUrl": "data:image/png;base64,…",
       "x": 0, "y": 0, "scale": 1, "rotation": 0,
       "opacity": 1,
+      "locked": false,
       "paperId": "…"
     }
   ]
 }
 ```
 
+Annotation `x/y`/`bubble`/`target` are in the anchor's space: window-center px for `"sheet"`, image-local px for `"image"` (see "Annotation anchoring" above).
+
+A save also writes an optional `window: { width, height }` — the sheet-area (window) size in CSS px at save time. Loading applies it via the `set-window-size` IPC (clamped to window minimums and the display's work area) so window-center-relative content lines up with the paper edges the way it was saved. Additive/optional: no schema version bump, older files simply don't have it.
+
 Images are embedded as data URLs so a project file is fully self-contained. Fine for now; large images make large files (see HANDOFF.md known issues).
 
-## Window state persistence
+## Window sizing
 
-`electron/main.ts` saves window bounds to `window-state.json` in `app.getPath('userData')` on close and restores them on launch (with basic sanity checks). Local file only — no cloud.
+The window always starts **centered at a fixed 800×500** — bounds are deliberately not persisted between launches (a predictable overlay position beats restoring wherever it was left; the old `window-state.json` persistence was removed 2026-07-08). `minWidth: 760` is a hard floor tied to the bottom bar design (see the UI chrome rule); `minHeight: 320`. The window remains freely resizable above those minimums.
 
 ## Build system
 
