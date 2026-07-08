@@ -2,9 +2,18 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: + toolbar responsiveness)
+**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: left toolbox + sheet stack visibility)
 
 ## Current state
+
+Latest: **Sheet stack visibility fix + bottom toolbar replaced by a left toolbox.**
+
+- **Sheet stack visibility**: two causes fixed. (1) Sheet background alpha was 0.84 — an image under two sheets kept only ~2.6% visibility, effectively disappearing; now 0.55, leaving ~20% show-through under two sheets. (2) The active-sheet z-index lift (navigating to Sheet 2 of 3 painted it *above* Sheet 3) scrambled the visual stack and buried lower content; removed entirely. New model: paint order never changes; sheets **above** the active one get `.sheet-group.above-active` — faded to 0.25 opacity and `pointer-events: none` — so the active sheet is clearly visible/editable and everything below it stays faintly visible, like lifting the upper sheets off a real stack. Fully reversible: activating the top sheet restores all sheets. See ARCHITECTURE.md "Sheet stack visibility".
+- **Left toolbox** (`Toolbar.tsx` + `.toolbar` in styles.css): the bottom wrapping bar is gone. The toolbar is now a fixed left-side 2-column icon grid, grouped by separators: sheet/import/snapshot → pen/eraser/text/callout/undo/redo (option dots span the row while a tool is active) → sheet label/up/down/delete + the disabled PDF page placeholder → scale/save/load/settings → paper-opacity + image-opacity/lock + ghost/collapse/hide/close. Same beige style, icons and tooltips. Height caps at the viewport and scrolls vertically on very short windows; width is fixed and small, so nothing clips at any window size. Collapses to a small "TraceLayer ›" pill in the same corner. The root keeps the `toolbar` class (Ghost Mode hover contract — unchanged). Popovers (scale/settings) now open to the **right** as `position: fixed` elements — absolute children would be clipped by the toolbox's scroll overflow; this requires the toolbox to stay transform-free.
+- **Paper margins**: sheets now sit at `inset: 18px 18px 18px 112px` — wide left margin so the toolbox never covers the left ruler; bottom margin shrank from 64px (old bottom bar) to 18px. `Ruler.tsx` constants (`LEFT/TOP/RIGHT/BOTTOM`) updated in sync, and the ruler corner badge is positioned inline from those constants.
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode logic untouched. Not clicked through in a running window; manual check items added to TASKS.md (especially: image on Sheet 1 visible after adding Sheets 2–3 and navigating, and toolbox usability at small window sizes).
+
+Earlier state:
 
 Latest: **Toolbar responsiveness fix.** The toolbar was a fixed, centered, single-row flexbox with no width cap — a window narrower than the row clipped both ends off-screen (html/body have `overflow: hidden`). CSS-only fix in `.toolbar`: `max-width: calc(100vw - 16px)`, `flex-wrap: wrap`, `justify-content: center`; it stays bottom-center and grows upward into extra rows when the window is narrow, so every control (New Sheet, tools, sheet nav, Ghost, settings, …) stays visible and clickable at any window size. Popovers got `max-width: calc(100vw - 12px)` for the same reason. No markup/logic changes; Ghost Mode's `.toolbar` hover contract untouched. A new **UI chrome rule** is documented in ARCHITECTURE.md: toolbar, rulers and window controls are chrome — never clipped, transformed or hidden by sheet content (chrome z-order: sheets/active group ≤ 10, drawing surface 20, ruler 30, toolbar 50). `npm run typecheck` and `npm run build` pass.
 
@@ -111,7 +120,7 @@ Earlier changes:
 - Opening DevTools docked can break window transparency — open detached if needed.
 - `Backspace` also deletes the selected image/text box/callout (same handler as `Delete`), but only when a text field doesn't have focus (so backspacing inside a note edits its text instead of deleting the note).
 - Global shortcut Ctrl+Alt+G is registered system-wide while the app runs; collides with any other app using it.
-- The active sheet is lifted above later sheets while selected (visual z-index only). Content on the *other* sheets is not clickable while a lower sheet is active — navigate to a sheet to edit its content.
+- While a lower sheet is active, the sheets above it are faded (opacity 0.25) and click-through; their content is not clickable until they're active again — navigate to a sheet to edit its content. The stack's paint order itself never changes.
 - Deleting a sheet does not restore which sheet was active on undo (the document comes back; the active-sheet pointer self-heals to the top sheet if its sheet vanished).
 - Text box/callout resizing is not implemented (height grows with content; width is fixed at creation).
 - Sheets no longer get a random tilt (it misaligned them with the corner rulers); the paper stack looks perfectly aligned until real paper rotation lands.

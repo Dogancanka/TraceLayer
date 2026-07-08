@@ -95,6 +95,15 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Image lock/pin: toolbar lock toggle on the selected image; locked images can't be moved/scaled/rotated/deleted (still selectable/unlockable); state saves/loads; undoable
 - [ ] Manual pass: anchor a note + callout to an image, move/scale/rotate the image and confirm they follow; delete the image and confirm annotations stay put on the sheet; lock an image and try to drag/wheel/delete it; toggle the sheet sound off/on and confirm persistence across restarts; save a v3 project and reload it; load an old v1/v2 file
 
+## Sheet stack visibility + left toolbox (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] Sheet translucency: background alpha 0.84 → 0.55 so lower-sheet content stays faintly visible through stacked sheets (~20% under two sheets, was ~2.6%)
+- [x] Removed the active-sheet z-index lift (it reordered the visual stack and buried lower content); sheets above the active one now fade (opacity 0.25) + become click-through instead — paint order never changes
+- [x] Bottom wrapping toolbar replaced by a collapsible left-side 2-column icon toolbox: grouped (sheet/import/snapshot, drawing/text/callout+undo/redo, navigation/delete, scale/save/load/settings, view/window), beige style + tooltips kept, `toolbar` class kept for the Ghost Mode hover contract, viewport-capped height with vertical scroll, popovers open right as position: fixed
+- [x] Paper left margin 112px (toolbox chrome doesn't cover the left ruler); bottom margin back to 18px; Ruler.tsx constants synced
+- [x] ARCHITECTURE.md: UI chrome rule updated (toolbox independent of sheet content) + new "Sheet stack visibility" rule (never reorder the paint order)
+- [ ] Manual pass: image on Sheet 1 → add Sheets 2–3 → image still faintly visible; navigate down → uppers fade, image clear; toolbox usable at small window sizes; collapse/expand pill; popovers open right; Ghost Mode hover still works over the toolbox
+
 ## Later
 
 See [ROADMAP.md](ROADMAP.md). Do not start roadmap items while 0.1 verification tasks are open.

@@ -142,19 +142,23 @@ export function Toolbar({
           onClick={() => setCollapsed(false)}
           title="Show controls"
         >
-          <ChevronUpIcon />
+          <ChevronRightIcon />
           <span>TraceLayer</span>
         </button>
       </div>
     );
   }
 
+  // Left toolbox: a 2-column icon grid, grouped top-to-bottom:
+  // sheet/import/snapshot → drawing/text/callout → navigation/delete →
+  // scale/save/settings → view/window. Spanning rows use .tb-span2.
   return (
     <div className="toolbar">
       <div className="toolbar-grip" title="Drag to move window">
         ⠿
       </div>
 
+      {/* sheet / import / snapshot */}
       <button
         type="button"
         className="icon-btn"
@@ -281,31 +285,29 @@ export function Toolbar({
 
       <div className="toolbar-sep" />
 
-      {/* Sheet navigation: which sheet in the stack new strokes/notes/imports land
-          on. Not to be confused with the (disabled) PDF page-controller below. */}
-      <div className="sheet-controller" title="Move between sheets (Alt+Up/Down, PageUp/PageDown)">
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={onSheetUp}
-          disabled={ghost || sheetIndex === sheetCount - 1}
-          title="Sheet above (Alt+Up / PageUp)"
-        >
-          <ChevronUpIcon />
-        </button>
-        <span className="sheet-label">
-          Sheet {sheetIndex + 1}/{sheetCount}
-        </span>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={onSheetDown}
-          disabled={ghost || sheetIndex === 0}
-          title="Sheet underneath (Alt+Down / PageDown)"
-        >
-          <ChevronDownIcon />
-        </button>
-      </div>
+      {/* navigation / delete: which sheet in the stack new strokes/notes/imports
+          land on. Not to be confused with the (disabled) PDF page-controller. */}
+      <span className="sheet-label" title="Active sheet (target of new content)">
+        Sheet {sheetIndex + 1}/{sheetCount}
+      </span>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onSheetUp}
+        disabled={ghost || sheetIndex === sheetCount - 1}
+        title="Sheet above (Alt+Up / PageUp)"
+      >
+        <ChevronUpIcon />
+      </button>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onSheetDown}
+        disabled={ghost || sheetIndex === 0}
+        title="Sheet underneath (Alt+Down / PageDown)"
+      >
+        <ChevronDownIcon />
+      </button>
       <button
         type="button"
         className="icon-btn"
@@ -315,9 +317,6 @@ export function Toolbar({
       >
         <TrashIcon />
       </button>
-
-      <div className="toolbar-sep" />
-
       {/* Placeholder for future multi-page (PDF) support — see DocumentPages in types.ts. */}
       <div className="page-controller" title="Multi-page documents coming later">
         <button type="button" className="icon-btn" disabled title="Previous page">
@@ -329,8 +328,10 @@ export function Toolbar({
         </button>
       </div>
 
+      <div className="toolbar-sep" />
+
       {/* Scale (målestok): label-only placeholder until real calibration lands. */}
-      <div className="settings-wrap">
+      <div className="settings-wrap tb-span2">
         <button
           type="button"
           className={`icon-btn scale-btn${openPopover === 'scale' ? ' active-tool' : ''}`}
@@ -373,59 +374,6 @@ export function Toolbar({
           </div>
         )}
       </div>
-
-      <div className="toolbar-sep" />
-
-      <button
-        type="button"
-        className={`icon-btn ghost-toggle${ghost ? ' active' : ''}`}
-        onClick={onToggleGhost}
-        title="Ghost Mode: clicks pass through to the app underneath (Ctrl+Alt+G)"
-      >
-        <GhostIcon />
-      </button>
-
-      <label className="opacity-control" title="Paper opacity">
-        <DropletIcon />
-        <input
-          type="range"
-          min={10}
-          max={100}
-          value={Math.round(opacity * 100)}
-          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
-          disabled={ghost}
-        />
-      </label>
-
-      {selectedImageOpacity !== null && (
-        <label className="opacity-control" title="Selected image opacity">
-          <ImageIcon />
-          <input
-            type="range"
-            min={5}
-            max={100}
-            value={Math.round(selectedImageOpacity * 100)}
-            onPointerDown={onImageGestureStart}
-            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
-            disabled={ghost}
-          />
-        </label>
-      )}
-      {selectedImageLocked !== null && (
-        <button
-          type="button"
-          className={`icon-btn${selectedImageLocked ? ' active-tool' : ''}`}
-          onClick={onToggleImageLock}
-          disabled={ghost}
-          title={
-            selectedImageLocked
-              ? 'Unlock image (locked images cannot be moved, scaled, rotated or deleted)'
-              : 'Lock image against accidental move/scale/rotate/delete'
-          }
-        >
-          {selectedImageLocked ? <LockIcon /> : <UnlockIcon />}
-        </button>
-      )}
 
       <button type="button" className="icon-btn" onClick={onSave} disabled={ghost} title="Save project as JSON">
         <SaveIcon />
@@ -497,13 +445,64 @@ export function Toolbar({
 
       <div className="toolbar-sep" />
 
+      {/* view / window: ghost, opacity, image controls, collapse/hide/close */}
+      <label className="opacity-control" title="Paper opacity">
+        <DropletIcon />
+        <input
+          type="range"
+          min={10}
+          max={100}
+          value={Math.round(opacity * 100)}
+          onChange={(e) => onOpacityChange(Number(e.target.value) / 100)}
+          disabled={ghost}
+        />
+      </label>
+
+      {selectedImageOpacity !== null && (
+        <label className="opacity-control" title="Selected image opacity">
+          <ImageIcon />
+          <input
+            type="range"
+            min={5}
+            max={100}
+            value={Math.round(selectedImageOpacity * 100)}
+            onPointerDown={onImageGestureStart}
+            onChange={(e) => onImageOpacityChange(Number(e.target.value) / 100)}
+            disabled={ghost}
+          />
+        </label>
+      )}
+      {selectedImageLocked !== null && (
+        <button
+          type="button"
+          className={`icon-btn${selectedImageLocked ? ' active-tool' : ''}`}
+          onClick={onToggleImageLock}
+          disabled={ghost}
+          title={
+            selectedImageLocked
+              ? 'Unlock image (locked images cannot be moved, scaled, rotated or deleted)'
+              : 'Lock image against accidental move/scale/rotate/delete'
+          }
+        >
+          {selectedImageLocked ? <LockIcon /> : <UnlockIcon />}
+        </button>
+      )}
+
+      <button
+        type="button"
+        className={`icon-btn ghost-toggle${ghost ? ' active' : ''}`}
+        onClick={onToggleGhost}
+        title="Ghost Mode: clicks pass through to the app underneath (Ctrl+Alt+G)"
+      >
+        <GhostIcon />
+      </button>
       <button
         type="button"
         className="icon-btn"
         onClick={() => setCollapsed(true)}
         title="Collapse controls"
       >
-        <ChevronDownIcon />
+        <ChevronLeftIcon />
       </button>
       <button type="button" className="icon-btn" onClick={onHide} title="Hide overlay (minimize)">
         <MinusIcon />

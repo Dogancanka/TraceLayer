@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ScaleCalibration } from '../types';
 
-// Keep in sync with .paper-sheet inset in styles.css.
-const MARGIN = 18;
-const BOTTOM = 64;
+// Keep in sync with .paper-sheet inset in styles.css (18px 18px 18px 112px —
+// the wide left margin makes room for the left toolbox chrome).
+const TOP = 18;
+const RIGHT = 18;
+const BOTTOM = 18;
+const LEFT = 112;
 const THICKNESS = 16;
 
 /** CSS reference pixel density; real-world sizes are approximate until measured calibration exists. */
@@ -73,8 +76,8 @@ interface RulerProps {
 export function Ruler({ scale }: RulerProps) {
   const { w, h } = useWindowSize();
   const spec = computeTicks(scale);
-  const width = Math.max(0, w - 2 * MARGIN);
-  const height = Math.max(0, h - MARGIN - BOTTOM);
+  const width = Math.max(0, w - LEFT - RIGHT);
+  const height = Math.max(0, h - TOP - BOTTOM);
   const approx = spec.cornerLabel !== 'px';
 
   const ticks = (length: number) => {
@@ -91,7 +94,7 @@ export function Ruler({ scale }: RulerProps) {
     <div className="ruler" aria-hidden>
       <svg
         className="ruler-top"
-        style={{ left: MARGIN, top: MARGIN - THICKNESS, width, height: THICKNESS }}
+        style={{ left: LEFT, top: TOP - THICKNESS, width, height: THICKNESS }}
       >
         {ticks(width).map((t) => (
           <g key={t.pos}>
@@ -111,7 +114,7 @@ export function Ruler({ scale }: RulerProps) {
       </svg>
       <svg
         className="ruler-left"
-        style={{ left: MARGIN - THICKNESS, top: MARGIN, width: THICKNESS, height }}
+        style={{ left: LEFT - THICKNESS, top: TOP, width: THICKNESS, height }}
       >
         {ticks(height).map((t) => (
           <g key={t.pos}>
@@ -129,7 +132,11 @@ export function Ruler({ scale }: RulerProps) {
           </g>
         ))}
       </svg>
-      <div className="ruler-corner" title={approx ? 'Approximate until calibrated' : 'Uncalibrated (CSS pixels)'}>
+      <div
+        className="ruler-corner"
+        style={{ left: LEFT - THICKNESS, top: TOP - THICKNESS }}
+        title={approx ? 'Approximate until calibrated' : 'Uncalibrated (CSS pixels)'}
+      >
         {approx ? `≈${spec.cornerLabel}` : 'px'}
       </div>
     </div>

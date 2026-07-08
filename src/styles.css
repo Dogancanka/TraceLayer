@@ -72,23 +72,28 @@ body,
 .sheet-group {
   position: absolute;
   inset: 0;
+  transition: opacity 0.15s ease;
 }
 
-/* The active (navigated-to) sheet is lifted above later sheets so Prev/Next
-   visibly switches sheets and its content stays editable. Must stay below the
-   drawing surface (20), ruler (30), and toolbar (50). */
-.sheet-group.active {
-  z-index: 10;
+/* Sheets stacked ABOVE the active one: faded so the active sheet (and
+   everything below it) stays clearly visible, and click-through so the
+   active sheet's content is editable. The paint order itself never changes —
+   no z-index lifting; that scrambled the visual stack. Restored to full
+   opacity as soon as the top sheet is active again. */
+.sheet-group.above-active {
+  opacity: 0.25;
+  pointer-events: none;
 }
 
 .paper-sheet {
   position: absolute;
-  /* Extra room at the bottom so the control bar sits below the sheet,
-     not on top of it. Keep in sync with .toolbar bottom offset. */
-  inset: 18px 18px 64px;
-  /* Translucent like real tracing paper: layers underneath show through
-     dimmed, so a new sheet visibly covers previous work. */
-  background-color: rgba(247, 242, 230, 0.84);
+  /* Room on the left for the toolbox (UI chrome) and its ruler strip.
+     Keep in sync with the LEFT/TOP/RIGHT/BOTTOM constants in Ruler.tsx. */
+  inset: 18px 18px 18px 112px;
+  /* Translucent like real tracing paper: content on lower sheets stays
+     faintly visible through the stack (two sheets on top still leave
+     ~20% show-through), while a new sheet still visibly dims it. */
+  background-color: rgba(247, 242, 230, 0.55);
   /* Subtle fiber grain + soft vignette to read as tracing paper. */
   background-image:
     repeating-linear-gradient(
@@ -196,10 +201,9 @@ body,
   user-select: none;
 }
 
+/* Position (top/left) is set inline by Ruler.tsx from its margin constants. */
 .ruler-corner {
   position: absolute;
-  top: 2px;
-  left: 2px;
   width: 16px;
   height: 16px;
   display: flex;
@@ -213,8 +217,11 @@ body,
 /* ---- Pen options (visible while the pen tool is active) ---- */
 
 .pen-options {
+  grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 0 2px;
 }
@@ -458,24 +465,27 @@ body,
   cursor: crosshair;
 }
 
-/* ---- Toolbar (warm beige, paper-like) ---- */
+/* ---- Toolbox (left-side vertical toolbar; warm beige, paper-like) ----
+
+   UI chrome: independent of paper/window content size. Fixed to the left
+   edge, two columns of icon buttons, grouped by separators. Never clipped:
+   width is fixed and small, height caps at the viewport and scrolls
+   vertically if the window is very short. Keep the root `toolbar` class —
+   the Ghost Mode hover check in App.tsx matches `.toolbar`. */
 
 .toolbar {
   position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 12px;
+  left: 12px;
   z-index: 50;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
   align-items: center;
-  /* UI chrome must never be clipped by the window edge: cap the width to the
-     viewport and wrap into extra rows (growing upward from the bottom) when
-     the window is narrower than one full row. Every control stays reachable. */
-  max-width: calc(100vw - 16px);
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 5px;
-  padding: 6px 10px;
+  gap: 4px;
+  padding: 6px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  overflow-x: hidden;
   border-radius: 12px;
   background: rgba(246, 240, 227, 0.96);
   border: 1px solid rgba(160, 148, 122, 0.55);
@@ -486,11 +496,18 @@ body,
   color: #4a4234;
 }
 
+/* Rows that span both columns (grip, label, sliders, option rows, seps). */
+.toolbar .tb-span2 {
+  grid-column: 1 / -1;
+}
+
 .toolbar-grip {
+  grid-column: 1 / -1;
   -webkit-app-region: drag;
   color: rgba(74, 66, 52, 0.5);
   font-size: 14px;
-  padding: 2px 6px;
+  padding: 2px 0;
+  text-align: center;
   cursor: grab;
 }
 
@@ -524,8 +541,9 @@ body,
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 6px;
-  min-width: 27px;
+  padding: 6px 0;
+  min-width: 0;
+  width: 100%;
   justify-content: center;
 }
 
@@ -548,9 +566,9 @@ body,
 }
 
 .toolbar-sep {
-  width: 1px;
-  align-self: stretch;
-  margin: 3px 2px;
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: 2px 2px;
   background: rgba(160, 148, 122, 0.45);
 }
 
@@ -565,9 +583,10 @@ body,
   color: #fff;
 }
 
-/* Collapsed state: a small pill handle, still `.toolbar` so the Ghost Mode
-   hover check keeps working. */
+/* Collapsed state: a small pill handle at the same spot, still `.toolbar`
+   so the Ghost Mode hover check keeps working. */
 .toolbar-collapsed {
+  grid-template-columns: auto;
   padding: 3px;
 }
 
@@ -576,68 +595,62 @@ body,
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  padding: 4px 12px;
+  padding: 6px 8px;
   background: transparent;
   color: rgba(74, 66, 52, 0.75);
 }
 
-/* ---- Sheet controller (navigate the sheet stack) ---- */
+/* ---- Sheet navigation labels ---- */
 
-.sheet-controller {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 2px;
-}
-
-.sheet-controller .sheet-label {
+.toolbar .sheet-label {
+  grid-column: 1 / -1;
   font-size: 11px;
   color: #4a4234;
-  min-width: 54px;
   text-align: center;
   white-space: nowrap;
-}
-
-.sheet-controller .icon-btn {
-  padding: 4px 2px;
-  min-width: 20px;
 }
 
 /* ---- Page controller (placeholder for future PDF pages) ---- */
 
 .page-controller {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  padding: 0 2px;
 }
 
 .page-controller .page-label {
   font-size: 11px;
   color: rgba(74, 66, 52, 0.6);
-  min-width: 30px;
   text-align: center;
 }
 
 .page-controller .icon-btn {
   padding: 4px 2px;
   min-width: 20px;
+  width: auto;
 }
 
 /* ---- Settings popover ---- */
 
 .settings-wrap {
-  position: relative;
   display: flex;
 }
 
+/* Opens to the RIGHT of the toolbox. position: fixed (viewport-anchored) on
+   purpose: the toolbox scrolls vertically when the window is short, and an
+   absolutely-positioned child would be clipped by that overflow. Requires
+   the toolbox to stay transform-free. Popovers are chrome too: never wider
+   or taller than the window. */
 .settings-popover {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  right: -8px;
+  position: fixed;
+  left: 102px;
+  top: 16px;
   width: 230px;
-  /* Popovers are chrome too: never wider than the window. */
-  max-width: calc(100vw - 12px);
+  max-width: calc(100vw - 112px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   padding: 12px;
   border-radius: 12px;
   background: rgba(246, 240, 227, 0.98);
@@ -649,11 +662,12 @@ body,
 }
 
 .opacity-control {
+  grid-column: 1 / -1;
   -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 4px;
+  gap: 4px;
+  padding: 0 2px;
   color: rgba(74, 66, 52, 0.7);
   font-size: 11px;
 }
@@ -663,7 +677,9 @@ body,
 }
 
 .opacity-control input[type='range'] {
-  width: 76px;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
   accent-color: #4a7dd6;
 }
 
@@ -681,13 +697,9 @@ body,
   font-size: 12px;
 }
 
-/* Centered on its button so it cannot be pushed off-window. Wide enough for
-   the three presets plus Clear on one row. */
+/* Wide enough for the three presets plus Clear on one row. */
 .scale-popover {
   width: 224px;
-  right: auto;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .scale-presets {

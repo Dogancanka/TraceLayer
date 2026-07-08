@@ -51,14 +51,21 @@ export function LayerStack({
   // translate maps them into the full-size svg. (A zero-size svg with
   // overflow:visible is NOT painted by Chromium — do not "simplify" back to that.)
   const { w, h } = useWindowSize();
+  const activeIndex = papers.findIndex((p) => p.id === activeSheetId);
   return (
     <div className="layer-stack">
-      {papers.map((paper) => (
-        // Each sheet + its content lives in one group so navigating sheets can
-        // lift the whole active sheet above later sheets (see .sheet-group in
-        // styles.css). Purely visual: the papers array (and save format) keeps
-        // its fixed order.
-        <div key={paper.id} className={`sheet-group${paper.id === activeSheetId ? ' active' : ''}`}>
+      {papers.map((paper, index) => (
+        // Each sheet + its content lives in one group. The stack's paint order
+        // NEVER changes (real tracing paper); instead, sheets stacked above
+        // the active one fade and become click-through (.above-active in
+        // styles.css) so a lower active sheet is visible and editable without
+        // reordering anything.
+        <div
+          key={paper.id}
+          className={`sheet-group${paper.id === activeSheetId ? ' active' : ''}${
+            activeIndex !== -1 && index > activeIndex ? ' above-active' : ''
+          }`}
+        >
           <div
             className={`paper-sheet${paper.id === activeSheetId ? ' active-sheet' : ''}`}
             style={{ '--tilt': `${paper.tilt}deg` } as CSSProperties}
