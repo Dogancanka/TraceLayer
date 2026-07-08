@@ -16,6 +16,7 @@ import {
   GhostIcon,
   ImageIcon,
   LayersPlusIcon,
+  LockIcon,
   MinusIcon,
   NoteIcon,
   PenIcon,
@@ -24,6 +25,7 @@ import {
   SaveIcon,
   TrashIcon,
   UndoIcon,
+  UnlockIcon,
   XIcon,
 } from './icons';
 
@@ -50,10 +52,17 @@ interface ToolbarProps {
   /** 0-based index of the active sheet, and how many sheets exist. */
   sheetIndex: number;
   sheetCount: number;
-  onPrevSheet: () => void;
-  onNextSheet: () => void;
+  /** Navigate to the sheet above (later in the stack) / underneath. */
+  onSheetUp: () => void;
+  onSheetDown: () => void;
   /** Deletes the active sheet. Disabled in the UI when only one sheet exists. */
   onDeleteSheet: () => void;
+  /** New Sheet sound preference (persisted in localStorage by the app). */
+  sheetSoundOn: boolean;
+  onToggleSheetSound: () => void;
+  /** Locked state of the selected image, or null when no image is selected. */
+  selectedImageLocked: boolean | null;
+  onToggleImageLock: () => void;
   onNewProject: () => void;
   onToolChange: (tool: Tool) => void;
   onUndo: () => void;
@@ -88,9 +97,13 @@ export function Toolbar({
   onCalloutColorChange,
   sheetIndex,
   sheetCount,
-  onPrevSheet,
-  onNextSheet,
+  onSheetUp,
+  onSheetDown,
   onDeleteSheet,
+  sheetSoundOn,
+  onToggleSheetSound,
+  selectedImageLocked,
+  onToggleImageLock,
   onNewProject,
   onToolChange,
   onUndo,
@@ -274,9 +287,9 @@ export function Toolbar({
         <button
           type="button"
           className="icon-btn"
-          onClick={onPrevSheet}
-          disabled={ghost || sheetIndex === 0}
-          title="Previous sheet (Alt+Up / PageUp)"
+          onClick={onSheetUp}
+          disabled={ghost || sheetIndex === sheetCount - 1}
+          title="Sheet above (Alt+Up / PageUp)"
         >
           <ChevronUpIcon />
         </button>
@@ -286,9 +299,9 @@ export function Toolbar({
         <button
           type="button"
           className="icon-btn"
-          onClick={onNextSheet}
-          disabled={ghost || sheetIndex === sheetCount - 1}
-          title="Next sheet (Alt+Down / PageDown)"
+          onClick={onSheetDown}
+          disabled={ghost || sheetIndex === 0}
+          title="Sheet underneath (Alt+Down / PageDown)"
         >
           <ChevronDownIcon />
         </button>
@@ -398,6 +411,21 @@ export function Toolbar({
           />
         </label>
       )}
+      {selectedImageLocked !== null && (
+        <button
+          type="button"
+          className={`icon-btn${selectedImageLocked ? ' active-tool' : ''}`}
+          onClick={onToggleImageLock}
+          disabled={ghost}
+          title={
+            selectedImageLocked
+              ? 'Unlock image (locked images cannot be moved, scaled, rotated or deleted)'
+              : 'Lock image against accidental move/scale/rotate/delete'
+          }
+        >
+          {selectedImageLocked ? <LockIcon /> : <UnlockIcon />}
+        </button>
+      )}
 
       <button type="button" className="icon-btn" onClick={onSave} disabled={ghost} title="Save project as JSON">
         <SaveIcon />
@@ -428,6 +456,13 @@ export function Toolbar({
               title="Clear all sheets, drawings and images and start over"
             >
               New Project (clear workspace)
+            </button>
+            <button
+              type="button"
+              onClick={onToggleSheetSound}
+              title="Play a paper sound when a new sheet is added"
+            >
+              New Sheet sound: {sheetSoundOn ? 'On' : 'Off'}
             </button>
             <div className="settings-hints">
               <div className="settings-hints-title">Shortcuts</div>

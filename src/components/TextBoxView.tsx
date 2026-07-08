@@ -4,16 +4,21 @@ import type { TextBox } from '../types';
 
 interface TextBoxViewProps {
   box: TextBox;
+  /** Resolved screen (window-center) position — box.x/y mapped out of the box's anchor space by the caller. */
+  position: { x: number; y: number };
   selected: boolean;
   ghost: boolean;
   onSelect: (id: string) => void;
+  /** Non-positional changes (text). */
   onChange: (id: string, patch: Partial<TextBox>) => void;
+  /** Position change, in screen coords; the caller converts back to anchor space. */
+  onMove: (id: string, screenPoint: { x: number; y: number }) => void;
   /** Called once when a drag starts, or when editing begins (undo snapshot). */
   onGestureStart: () => void;
 }
 
 /** Movable, editable note bubble. Drag the grip to move; click the body to edit. */
-export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestureStart }: TextBoxViewProps) {
+export function TextBoxView({ box, position, selected, ghost, onSelect, onChange, onMove, onGestureStart }: TextBoxViewProps) {
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; origX: number; origY: number } | null>(
     null,
   );
@@ -43,14 +48,14 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
     e.stopPropagation();
     onSelect(box.id);
     onGestureStart();
-    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, origX: box.x, origY: box.y };
+    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, origX: position.x, origY: position.y };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onGripPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
-    onChange(box.id, {
+    onMove(box.id, {
       x: drag.origX + (e.clientX - drag.startX),
       y: drag.origY + (e.clientY - drag.startY),
     });
@@ -66,7 +71,7 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
     <div
       className={`textbox${selected ? ' selected' : ''}`}
       style={{
-        transform: `translate(-50%, -50%) translate(${box.x}px, ${box.y}px)`,
+        transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px)`,
         width: box.width,
       }}
     >

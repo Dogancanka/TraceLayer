@@ -2,17 +2,23 @@ import { useEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { Callout } from '../types';
 
+type DragField = 'bubble' | 'target';
+
 interface CalloutViewProps {
   callout: Callout;
+  /** Resolved screen (window-center) positions — bubble/target mapped out of the callout's anchor space by the caller. */
+  bubblePosition: { x: number; y: number };
+  targetPosition: { x: number; y: number };
   selected: boolean;
   ghost: boolean;
   onSelect: (id: string) => void;
+  /** Non-positional changes (text). */
   onChange: (id: string, patch: Partial<Callout>) => void;
+  /** Position change, in screen coords; the caller converts back to anchor space. */
+  onMove: (id: string, field: DragField, screenPoint: { x: number; y: number }) => void;
   /** Called once when a drag starts, or when editing begins (undo snapshot). */
   onGestureStart: () => void;
 }
-
-type DragField = 'bubble' | 'target';
 
 /**
  * A note bubble plus a draggable arrow target handle. The arrow line itself
@@ -20,7 +26,17 @@ type DragField = 'bubble' | 'target';
  * images/strokes; this component renders only the interactive bubble and
  * target handle.
  */
-export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGestureStart }: CalloutViewProps) {
+export function CalloutView({
+  callout,
+  bubblePosition,
+  targetPosition,
+  selected,
+  ghost,
+  onSelect,
+  onChange,
+  onMove,
+  onGestureStart,
+}: CalloutViewProps) {
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -55,7 +71,7 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
     e.stopPropagation();
     onSelect(callout.id);
     onGestureStart();
-    const orig = field === 'bubble' ? callout.bubble : callout.target;
+    const orig = field === 'bubble' ? bubblePosition : targetPosition;
     dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, origX: orig.x, origY: orig.y, field };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -64,7 +80,7 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
     const point = { x: drag.origX + (e.clientX - drag.startX), y: drag.origY + (e.clientY - drag.startY) };
-    onChange(callout.id, drag.field === 'bubble' ? { bubble: point } : { target: point });
+    onMove(callout.id, drag.field, point);
   };
 
   const onDragEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -78,7 +94,7 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
       <div
         className={`callout-bubble${selected ? ' selected' : ''}`}
         style={{
-          transform: `translate(-50%, -50%) translate(${callout.bubble.x}px, ${callout.bubble.y}px)`,
+          transform: `translate(-50%, -50%) translate(${bubblePosition.x}px, ${bubblePosition.y}px)`,
           borderColor: callout.style.color,
         }}
       >
@@ -109,7 +125,7 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
         <div
           className="callout-target-handle"
           style={{
-            transform: `translate(-50%, -50%) translate(${callout.target.x}px, ${callout.target.y}px)`,
+            transform: `translate(-50%, -50%) translate(${targetPosition.x}px, ${targetPosition.y}px)`,
             background: callout.style.color,
           }}
           onPointerDown={beginDrag('target')}

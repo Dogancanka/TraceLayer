@@ -25,6 +25,7 @@ export function ImageView({ img, selected, ghost, onSelect, onChange, onGestureS
     if (ghost || e.button !== 0) return;
     e.stopPropagation(); // keep the stage from deselecting
     onSelect(img.id);
+    if (img.locked) return; // still selectable (to unlock), never draggable
     onGestureStart();
     dragRef.current = {
       pointerId: e.pointerId,
@@ -55,6 +56,7 @@ export function ImageView({ img, selected, ghost, onSelect, onChange, onGestureS
   const onWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
     if (ghost) return;
     onSelect(img.id);
+    if (img.locked) return; // no scale/rotate while locked
     const now = Date.now();
     if (now - lastWheelRef.current > WHEEL_GESTURE_GAP_MS) onGestureStart();
     lastWheelRef.current = now;
@@ -70,7 +72,7 @@ export function ImageView({ img, selected, ghost, onSelect, onChange, onGestureS
 
   return (
     <div
-      className={`image-item${selected ? ' selected' : ''}`}
+      className={`image-item${selected ? ' selected' : ''}${img.locked ? ' locked' : ''}`}
       style={{
         transform: `translate(-50%, -50%) translate(${img.x}px, ${img.y}px) rotate(${img.rotation}deg) scale(${img.scale})`,
         opacity: img.opacity,

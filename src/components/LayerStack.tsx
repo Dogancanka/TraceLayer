@@ -4,6 +4,7 @@ import { TextBoxView } from './TextBoxView';
 import { CalloutView } from './CalloutView';
 import { strokePath } from '../stroke';
 import { useWindowSize } from '../useWindowSize';
+import { anchorToScreen, screenToAnchor } from '../anchor';
 import type { Callout, ImageItem, PaperSheet, Selection, TextBox } from '../types';
 
 interface LayerStackProps {
@@ -90,13 +91,18 @@ export function LayerStack({
             </svg>
           )}
           {paper.textBoxes.map((box) => (
+            // Stored coords are in anchor space (sheet or image-local, see
+            // src/anchor.ts); views work purely in screen space, so positions
+            // are resolved here and drag results converted back on the way in.
             <TextBoxView
               key={box.id}
               box={box}
+              position={anchorToScreen({ x: box.x, y: box.y }, box.anchor, images)}
               selected={selection?.kind === 'text' && selection.id === box.id}
               ghost={ghost}
               onSelect={onSelectText}
               onChange={onChangeText}
+              onMove={(id, screenPoint) => onChangeText(id, screenToAnchor(screenPoint, box.anchor, images))}
               onGestureStart={onGestureStart}
             />
           ))}
@@ -116,19 +122,23 @@ export function LayerStack({
                     <path d="M0,0 L10,5 L0,10 Z" fill="currentColor" />
                   </marker>
                 </defs>
-                {paper.callouts.map((callout) => (
-                  <line
-                    key={callout.id}
-                    x1={callout.bubble.x}
-                    y1={callout.bubble.y}
-                    x2={callout.target.x}
-                    y2={callout.target.y}
-                    stroke={callout.style.color}
-                    color={callout.style.color}
-                    strokeWidth={1.6}
-                    markerEnd={`url(#callout-arrowhead-${paper.id})`}
-                  />
-                ))}
+                {paper.callouts.map((callout) => {
+                  const bubble = anchorToScreen(callout.bubble, callout.anchor, images);
+                  const target = anchorToScreen(callout.target, callout.anchor, images);
+                  return (
+                    <line
+                      key={callout.id}
+                      x1={bubble.x}
+                      y1={bubble.y}
+                      x2={target.x}
+                      y2={target.y}
+                      stroke={callout.style.color}
+                      color={callout.style.color}
+                      strokeWidth={1.6}
+                      markerEnd={`url(#callout-arrowhead-${paper.id})`}
+                    />
+                  );
+                })}
               </g>
             </svg>
           )}
@@ -136,10 +146,16 @@ export function LayerStack({
             <CalloutView
               key={callout.id}
               callout={callout}
+              bubblePosition={anchorToScreen(callout.bubble, callout.anchor, images)}
+              targetPosition={anchorToScreen(callout.target, callout.anchor, images)}
               selected={selection?.kind === 'callout' && selection.id === callout.id}
               ghost={ghost}
               onSelect={onSelectCallout}
               onChange={onChangeCallout}
+              onMove={(id, field, screenPoint) => {
+                const local = screenToAnchor(screenPoint, callout.anchor, images);
+                onChangeCallout(id, field === 'bubble' ? { bubble: local } : { target: local });
+              }}
               onGestureStart={onGestureStart}
             />
           ))}

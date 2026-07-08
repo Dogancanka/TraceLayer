@@ -19,7 +19,8 @@ Transparent always-on-top paper window, Ghost Mode click-through, image tracing 
 - PDF page import (rendered to image, still no PDF editing)
 - Multiple monitors: move overlay between screens cleanly
 - Snap window to a target app's bounds (still overlay-based — not a plugin)
-- Simple layer list (reorder, hide, lock)
+- Simple layer list (reorder, hide, lock) — per-image **lock** already shipped early (2026-07-08, toolbar lock button); the list UI with reorder/hide remains
+- Anchor management UI (re-anchor an existing annotation to a different image/sheet) — anchoring itself shipped 2026-07-08; only placement-time defaults exist so far
 
 ## 0.4 — Distribution
 

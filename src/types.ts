@@ -8,6 +8,19 @@ export const DEFAULT_CALLOUT_COLOR = '#3a3630';
 /** Default offset (px) of a new callout's bubble from its arrow target. */
 export const DEFAULT_BUBBLE_OFFSET = 70;
 
+/**
+ * What an annotation's coordinates are relative to.
+ * - 'sheet' (the default): window-center-relative px, like strokes/images.
+ * - 'image': px in that image's local space (relative to the image's center,
+ *   before its scale/rotation are applied) — the annotation follows the image
+ *   when it moves/scales/rotates. See src/anchor.ts for the mapping.
+ * Applies to text boxes and callouts today; future shape annotations should
+ * reuse this same type.
+ */
+export type Anchor = { kind: 'sheet' } | { kind: 'image'; imageId: string };
+
+export const sheetAnchor = (): Anchor => ({ kind: 'sheet' });
+
 /** One pen stroke. Flat [x0, y0, x1, y1, …] list, window-center-relative px. */
 export interface Stroke {
   id: string;
@@ -18,7 +31,7 @@ export interface Stroke {
   width: number;
 }
 
-/** A movable, editable note. Position is window-center-relative, like strokes/images. */
+/** A movable, editable note. `x`/`y` are in the anchor's space (see Anchor). */
 export interface TextBox {
   id: string;
   /** The sheet this box belongs to; it renders and is interactive only when that sheet is reachable. */
@@ -28,6 +41,8 @@ export interface TextBox {
   /** Box width in px; height grows with content. */
   width: number;
   text: string;
+  /** What x/y are relative to. Older files normalize to the sheet. */
+  anchor: Anchor;
 }
 
 export interface CalloutStyle {
@@ -40,11 +55,13 @@ export interface Callout {
   id: string;
   sheetId: string;
   text: string;
-  /** Window-center-relative position of the bubble. */
+  /** Bubble position, in the anchor's space (see Anchor). */
   bubble: { x: number; y: number };
-  /** Window-center-relative point the arrow points at. */
+  /** Point the arrow points at, in the anchor's space. */
   target: { x: number; y: number };
   style: CalloutStyle;
+  /** What bubble/target are relative to. Older files normalize to the sheet. */
+  anchor: Anchor;
 }
 
 /** One sheet of tracing paper in the stack. */
@@ -90,6 +107,11 @@ export interface ImageItem {
   rotation: number;
   /** Per-image opacity, 0.05–1 (multiplies with the global paper opacity). */
   opacity: number;
+  /**
+   * Locked images cannot be moved/scaled/rotated/deleted (still selectable,
+   * so the lock can be toggled off). Older files normalize to unlocked.
+   */
+  locked: boolean;
   /**
    * The sheet this image sits on. Sheets and their images render
    * interleaved, so a newer sheet covers older sheets' images.
@@ -143,12 +165,14 @@ export interface DocumentPages {
  * v1: papers had only `strokes`.
  * v2: papers also have `textBoxes`, `callouts`, and a reserved `calibration`
  *     placeholder (see PaperSheet).
+ * v3: text boxes/callouts carry an `anchor` (sheet or image), images carry
+ *     `locked`.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** On-disk project format (saved as .tracelayer.json). */
 export interface ProjectFile {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   opacity: number;
   papers: PaperSheet[];
   images: ImageItem[];
@@ -189,12 +213,14 @@ export function normalizeProject(project: ProjectFile): ProjectFile {
       sheetId: box.sheetId ?? paper.id,
       width: box.width ?? DEFAULT_TEXTBOX_WIDTH,
       text: box.text ?? '',
+      anchor: box.anchor ?? sheetAnchor(),
     })),
     callouts: (paper.callouts ?? []).map((callout) => ({
       ...callout,
       sheetId: callout.sheetId ?? paper.id,
       text: callout.text ?? '',
       style: callout.style ?? { color: DEFAULT_CALLOUT_COLOR },
+      anchor: callout.anchor ?? sheetAnchor(),
     })),
     calibration: paper.calibration ?? null,
   }));
@@ -207,6 +233,7 @@ export function normalizeProject(project: ProjectFile): ProjectFile {
       ...img,
       opacity: img.opacity ?? 1,
       paperId: img.paperId ?? topPaperId,
+      locked: img.locked ?? false,
     })),
     scale: project.scale ?? uncalibratedScale(),
   };

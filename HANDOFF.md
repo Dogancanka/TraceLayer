@@ -2,9 +2,20 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-08 (Bugfix pass on markup/sheet-navigation)
+**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: anchoring, image lock, nav direction, sheet sound)
 
 ## Current state
+
+Latest: **Annotation anchoring + image lock + sheet-nav direction fix + New Sheet sound.**
+
+- **Annotation anchoring** (`src/anchor.ts`, `Anchor` in `src/types.ts`, resolved in `LayerStack`): text boxes and callouts store coordinates in an *anchor space* — the sheet (default) or an imported image. Image-anchored annotations follow the image's move/scale/rotate automatically, because rendering always resolves through the live image transform. Placement default: image selected → new annotation anchors to it; otherwise sheet. Selecting the text/callout tool now deliberately keeps an image selection alive (it's the anchor target). Views work purely in screen space (`position`/`bubblePosition`/`targetPosition` + `onMove`); all conversion lives in `LayerStack`. Deleting an image (directly or via Delete Sheet) bakes anchored annotations' screen positions and re-anchors them to the sheet (`detachAnnotationsFromImage`). Old files migrate to sheet anchors. Future shapes must reuse this pattern — see ARCHITECTURE.md "Annotation anchoring".
+- **Schema v3** (`SCHEMA_VERSION = 3`): adds `anchor` on text boxes/callouts and `locked` on images; `normalizeProject()` upgrades v1/v2 with sheet anchors and `locked: false`. Loader accepts versions 1–3.
+- **Image lock** (lock button in the toolbar while an image is selected): locked images ignore drag/wheel/Shift+wheel and the Delete key, stay selectable (to unlock), show a solid (not dashed) selection outline and no grab cursor. Lock state persists in the project file and is undoable.
+- **Sheet navigation direction fixed**: Up (button, Alt+Up, PageUp) = sheet *above* (later in the stack); Down (button, Alt+Down, PageDown) = sheet *underneath*. Previously inverted. Tooltips updated; disabled states follow (Up disabled on the top sheet, Down on the bottom one).
+- **New Sheet sound** (`src/assets/audio/new_sheet_sound.wav`, imported as a Vite asset URL — see `src/assets.d.ts`): plays only on the New Sheet button, wrapped so any audio failure is silent. Toggle in the settings popover ("New Sheet sound: On/Off"), persisted in `localStorage` (`tracelayer.newSheetSound`), default on.
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode untouched. Not manually clicked through — the anchor math (translate → rotate → scale, matching ImageView's CSS transform order) and lock/sound paths need a human pass (see TASKS.md).
+
+Earlier state:
 
 Latest: **Bugfix pass over the markup + sheet-navigation work.** Six fixes, no new features:
 
@@ -100,6 +111,9 @@ Earlier changes:
 - Deleting a sheet does not restore which sheet was active on undo (the document comes back; the active-sheet pointer self-heals to the top sheet if its sheet vanished).
 - Text box/callout resizing is not implemented (height grows with content; width is fixed at creation).
 - Sheets no longer get a random tilt (it misaligned them with the corner rulers); the paper stack looks perfectly aligned until real paper rotation lands.
+- An image-anchored annotation scales its *position* with the image but not its own box size/text — zooming an image far out leaves its notes full-size at converging positions. Acceptable for now.
+- There is no UI to change an existing annotation's anchor; it's chosen at placement (image selected → image anchor) and only changes automatically when the anchor image is deleted.
+- A locked image's opacity can still be changed via the toolbar slider while selected — deliberate (opacity is a conscious act, not an accidental drag).
 
 ## How to run
 

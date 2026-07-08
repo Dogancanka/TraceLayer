@@ -86,6 +86,15 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Settings icon replaced with a real gear (feather cog outline, inline SVG, no dependency); TrashIcon added in the same style
 - [ ] Manual click-through of these fixes in a running window (typing in a note/callout, New Sheet + rulers, sheet nav visual lift, delete sheet, popover layout)
 
+## Anchoring + image lock + nav direction + sheet sound (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] New Sheet sound: `src/assets/audio/new_sheet_sound.wav` plays on the New Sheet button only; settings-popover toggle, persisted in localStorage (`tracelayer.newSheetSound`), fails silently
+- [x] Sheet navigation direction: Up = sheet above, Down = sheet underneath (was inverted); tooltips + Alt+Up/Down / PageUp/PageDown match; disabled states follow
+- [x] Annotation anchoring (`src/anchor.ts`): text boxes/callouts anchor to the sheet (default) or to an imported image; image-anchored annotations follow the image's move/scale/rotate; placement anchors to the selected image if any; deleting an image (or its sheet) re-anchors its annotations to the sheet in place; old files migrate to sheet anchors; future shapes reuse the same `Anchor` type
+- [x] Schema v3: `anchor` on annotations, `locked` on images; `normalizeProject()` upgrade path kept for v1/v2
+- [x] Image lock/pin: toolbar lock toggle on the selected image; locked images can't be moved/scaled/rotated/deleted (still selectable/unlockable); state saves/loads; undoable
+- [ ] Manual pass: anchor a note + callout to an image, move/scale/rotate the image and confirm they follow; delete the image and confirm annotations stay put on the sheet; lock an image and try to drag/wheel/delete it; toggle the sheet sound off/on and confirm persistence across restarts; save a v3 project and reload it; load an old v1/v2 file
+
 ## Later
 
 See [ROADMAP.md](ROADMAP.md). Do not start roadmap items while 0.1 verification tasks are open.
