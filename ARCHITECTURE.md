@@ -58,7 +58,7 @@ Plain React state in `src/App.tsx` — no state library (deliberate; do not add 
 - `selection: Selection | null` — `{ kind: 'image' | 'text' | 'callout', id }`. Replaces the old image-only `selectedId`; Delete/Backspace and the per-item drag/edit UI branch on `kind`.
 - `ghost` — mirror of main-process state.
 
-**UI chrome rule:** Toolbar, rulers and window controls are UI chrome — independent of sheet content and the paper/window size. They must not be clipped, transformed or hidden by sheet content. Concretely: chrome lives outside/above the sheet z-range (drawing surface `z-index: 20`, ruler `30`, toolbox `50`; sheet groups have no z-index at all), is never a child of a sheet group, and adapts to the window instead of overflowing it. The toolbox is a fixed left-side 2-column icon grid (`.toolbar` in styles.css — the class name is load-bearing, the Ghost Mode hover check matches it) that caps its height at the viewport and scrolls vertically when the window is very short, and collapses to a small pill. Its popovers use `position: fixed` (viewport-anchored, opening to the right) because an absolutely-positioned child would be clipped by the toolbox's own scroll overflow — which also means the toolbox must stay transform-free. The paper keeps a 112px left margin (`.paper-sheet` inset, synced with `LEFT` in `Ruler.tsx`) so the toolbox does not sit on top of the left ruler.
+**UI chrome rule:** Toolbar, rulers and window controls are UI chrome — independent of sheet content and the paper/window size. They must not be clipped, transformed or hidden by sheet content. Concretely: chrome lives outside/above the sheet z-range (drawing surface `z-index: 20`, ruler `30`, toolbox `50`; sheet groups have no z-index at all), is never a child of a sheet group, and always fits the window. The toolbox is a fixed left-side **single-column** compact icon strip (`.toolbar` in styles.css — the class name is load-bearing, the Ghost Mode hover check matches it) that collapses to a small pill. It never scrolls and is never clipped by design: the whole column fits within the **minimum window height of 500px** enforced in `electron/main.ts` (~460px worst case). Adding a control to the toolbox requires re-verifying that budget. Its popovers use `position: fixed` (viewport-anchored, opening to the right); the toolbox must therefore stay transform-free. The paper keeps a 112px left margin (`.paper-sheet` inset, synced with `LEFT` in `Ruler.tsx`) so the toolbox does not sit on top of the left ruler.
 
 **Sheet stack visibility:** sheets must read as real stacked tracing paper. Sheet background alpha is 0.55, so content two sheets down still shows through (~20%). The paint order of the stack **never changes**; when the active sheet is not the topmost one, the sheets *above* it fade (`.sheet-group.above-active`, opacity 0.25) and become click-through (`pointer-events: none`) so the active sheet is clearly visible and editable — navigating sheets is a pure visual-state change, never a reorder, and returning to the top sheet restores every sheet to full opacity. (An earlier z-index-lift approach reordered the visual stack and made lower-sheet content disappear behind multiple sheet layers; don't reintroduce it.)
 
@@ -124,9 +124,9 @@ Annotation `x/y`/`bubble`/`target` are in the anchor's space: window-center px f
 
 Images are embedded as data URLs so a project file is fully self-contained. Fine for now; large images make large files (see HANDOFF.md known issues).
 
-## Window state persistence
+## Window sizing
 
-`electron/main.ts` saves window bounds to `window-state.json` in `app.getPath('userData')` on close and restores them on launch (with basic sanity checks). Local file only — no cloud.
+The window always starts **centered at a fixed 800×500** — bounds are deliberately not persisted between launches (a predictable overlay position beats restoring wherever it was left; the old `window-state.json` persistence was removed 2026-07-08). `minHeight: 500` is a hard floor tied to the toolbox design (see the UI chrome rule); `minWidth: 360`. The window remains freely resizable above those minimums.
 
 ## Build system
 

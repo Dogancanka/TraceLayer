@@ -149,9 +149,10 @@ export function Toolbar({
     );
   }
 
-  // Left toolbox: a 2-column icon grid, grouped top-to-bottom:
+  // Left toolbox: ONE compact column of icon buttons, grouped top-to-bottom:
   // sheet/import/snapshot → drawing/text/callout → navigation/delete →
-  // scale/save/settings → view/window. Spanning rows use .tb-span2.
+  // scale/save/settings → view/window. Sized to fit entirely (no scrolling)
+  // within the 500px minimum window height — see .toolbar in styles.css.
   return (
     <div className="toolbar">
       <div className="toolbar-grip" title="Drag to move window">
@@ -317,21 +318,14 @@ export function Toolbar({
       >
         <TrashIcon />
       </button>
-      {/* Placeholder for future multi-page (PDF) support — see DocumentPages in types.ts. */}
-      <div className="page-controller" title="Multi-page documents coming later">
-        <button type="button" className="icon-btn" disabled title="Previous page">
-          <ChevronLeftIcon />
-        </button>
-        <span className="page-label">1 / 1</span>
-        <button type="button" className="icon-btn" disabled title="Next page">
-          <ChevronRightIcon />
-        </button>
-      </div>
-
       <div className="toolbar-sep" />
 
-      {/* Scale (målestok): label-only placeholder until real calibration lands. */}
-      <div className="settings-wrap tb-span2">
+      {/* Scale (målestok): label-only placeholder until real calibration lands.
+          (The old disabled PDF page-controller placeholder was removed from the
+          toolbox to keep the single column within the 500px minimum window
+          height — multi-page support remains reserved via DocumentPages in
+          types.ts.) */}
+      <div className="settings-wrap">
         <button
           type="button"
           className={`icon-btn scale-btn${openPopover === 'scale' ? ' active-tool' : ''}`}
@@ -340,7 +334,6 @@ export function Toolbar({
           title={`Drawing scale (målestok): ${scale.drawingScale ?? 'uncalibrated'}`}
         >
           <RulerIcon />
-          {scale.drawingScale && <span className="scale-label">{scale.drawingScale}</span>}
           <DropArrow />
         </button>
         {openPopover === 'scale' && (

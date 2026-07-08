@@ -2,9 +2,18 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: left toolbox + sheet stack visibility)
+**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: single-column toolbox + fixed 800×500 start)
 
 ## Current state
+
+Latest: **Toolbox reworked to a single compact column; window always starts centered at 800×500.**
+
+- **Single-column toolbox**: the 2-column grid read poorly — now one compact 56px-wide column (13px icons, tight padding, same beige style/groups/tooltips). **No scrolling, ever**: the whole column fits (~460px worst case — image selected or tool option dots open) within the minimum window height. The disabled PDF page-controller placeholder row was removed from the toolbox to make the budget (multi-page stays reserved via `DocumentPages` in types.ts); the scale button no longer shows its inline label (value lives in the tooltip + popover). Adding any toolbox control requires re-checking the height budget — see the comment on `.toolbar` in styles.css.
+- **Fixed startup geometry** (`electron/main.ts`): window always opens centered at 800×500. `window-state.json` persistence removed entirely. `minHeight: 500` is a hard floor tied to the toolbox budget (bar can never be clipped at any allowed window size); `minWidth: 360`; still freely resizable above that.
+- Popovers unchanged in behavior (open right, `position: fixed`), repositioned for the narrower toolbox (left: 80px).
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode untouched (`.toolbar` class contract intact). Not clicked through in a running window.
+
+Earlier state:
 
 Latest: **Sheet stack visibility fix + bottom toolbar replaced by a left toolbox.**
 
@@ -116,7 +125,7 @@ Earlier changes:
 - Loading a project replaces the current document (it does push an undo snapshot first).
 - Images are embedded in project JSON as base64 data URLs → large images make large project files.
 - Load failure shows a plain `alert()`.
-- Window position/size not persisted between launches.
+- Window position/size deliberately not persisted (removed 2026-07-08): every launch starts centered at 800×500, minimum 360×500.
 - Opening DevTools docked can break window transparency — open detached if needed.
 - `Backspace` also deletes the selected image/text box/callout (same handler as `Delete`), but only when a text field doesn't have focus (so backspacing inside a note edits its text instead of deleting the note).
 - Global shortcut Ctrl+Alt+G is registered system-wide while the app runs; collides with any other app using it.

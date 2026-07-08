@@ -1,11 +1,11 @@
 import type { ReactNode, SVGProps } from 'react';
 
-/** Minimal stroke icons (feather-style), sized for the toolbar. */
+/** Minimal stroke icons (feather-style), sized for the compact toolbox. */
 function Icon({ children, ...props }: SVGProps<SVGSVGElement> & { children: ReactNode }) {
   return (
     <svg
-      width={15}
-      height={15}
+      width={13}
+      height={13}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

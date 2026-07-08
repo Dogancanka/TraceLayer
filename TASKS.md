@@ -104,6 +104,13 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] ARCHITECTURE.md: UI chrome rule updated (toolbox independent of sheet content) + new "Sheet stack visibility" rule (never reorder the paint order)
 - [ ] Manual pass: image on Sheet 1 → add Sheets 2–3 → image still faintly visible; navigate down → uppers fade, image clear; toolbox usable at small window sizes; collapse/expand pill; popovers open right; Ghost Mode hover still works over the toolbox
 
+## Single-column toolbox + fixed startup size (2026-07-08, branch fix-annotation-anchors-and-sheet-nav)
+
+- [x] Toolbox reworked from 2 columns to one compact 56px column (13px icons); all controls fit without scrolling at the minimum window height — height budget documented on `.toolbar` in styles.css
+- [x] Removed the disabled PDF page-controller placeholder from the toolbox (kept reserved in types/ROADMAP) and the inline scale label (tooltip + popover still show the value) to fit the budget
+- [x] Window always starts centered at fixed 800×500; window-state persistence removed; minHeight 500 hard floor so the toolbox can never be clipped; minWidth 360
+- [ ] Manual pass: resize to minimum and confirm the full toolbox is visible without scroll; restart and confirm centered 800×500
+
 ## Later
 
 See [ROADMAP.md](ROADMAP.md). Do not start roadmap items while 0.1 verification tasks are open.
