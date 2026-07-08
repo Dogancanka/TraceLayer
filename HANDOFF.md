@@ -2,9 +2,21 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-07 (Markup annotations + sheet navigation)
+**Last updated:** 2026-07-08 (Bugfix pass on markup/sheet-navigation)
 
 ## Current state
+
+Latest: **Bugfix pass over the markup + sheet-navigation work.** Six fixes, no new features:
+
+- **Reversed typing in notes/callouts fixed** (`TextBoxView.tsx`, `CalloutView.tsx`): the `contentEditable` divs rendered `{text}` as a React child, so every keystroke re-rendered the node and reset the caret to the start ("door" → "rood"). They are now uncontrolled: React renders no children; an effect writes `box.text`/`callout.text` into `el.innerText` only when the element is **not** focused (covers mount, undo/redo, project load). `onInput` still reads back via `innerText`. Do not reintroduce a text child there.
+- **Random sheet tilt removed** (`App.tsx`, `types.ts`): random per-sheet rotation misaligned sheet edges with the fixed corner rulers after New Sheet. `newSheet()` always creates `tilt: 0` and `normalizeProject()` flattens older files' tilts to 0 on load. The `tilt` field stays in the schema and the `--tilt` CSS var still works — re-enable only together with real paper rotation (pointer mapping). Rulers remain `z-index: 30`, above all sheet content.
+- **Sheet navigation is now visible** (`LayerStack.tsx`, `.sheet-group` in `styles.css`): each sheet plus its images/strokes/notes/callouts is wrapped in one absolutely-positioned full-window group div; the active sheet's group gets `z-index: 10`, lifting the whole sheet above later sheets. Purely visual — the `papers` array and save format never reorder. Side effect (intended): a navigated-to lower sheet's content is interactive again while active. The `.drawing-surface` gained `z-index: 20` so pen/eraser input stays above the lifted group; ruler (30) and toolbar (50) unchanged.
+- **Delete sheet** (trash button next to the sheet controller): deletes the active sheet and everything on it (its images are filtered out of `images` too). Confirms first only when the sheet has content; disabled (with explanatory tooltip) when a single sheet remains; afterwards the sheet underneath becomes active. Undoable via the normal snapshot history.
+- **Scale popover widened** (224px, presets row wraps) so 1:50/1:100/1:200/Clear all fit; still centered on its button.
+- **Settings icon is a real gear** (feather `settings` cog outline in `icons.tsx`; old one read as a sun/brightness icon). Added `TrashIcon` in the same style; still no icon dependency.
+- **Verification**: `npm run typecheck` and `npm run build` pass. Ghost Mode logic untouched (the new `.sheet-group` divs set no `pointer-events`, so they inherit `none` from `.stage.ghost` like everything else). Not yet manually clicked through in a running window — the standing manual-verification pass in TASKS.md still applies and now includes these fixes.
+
+Earlier state:
 
 Latest: **Text notes, callout bubbles with arrows, and sheet up/down navigation.**
 
@@ -84,8 +96,10 @@ Earlier changes:
 - Opening DevTools docked can break window transparency — open detached if needed.
 - `Backspace` also deletes the selected image/text box/callout (same handler as `Delete`), but only when a text field doesn't have focus (so backspacing inside a note edits its text instead of deleting the note).
 - Global shortcut Ctrl+Alt+G is registered system-wide while the app runs; collides with any other app using it.
-- When the active sheet (target of new content) isn't the topmost sheet, its highlight ring can be mostly hidden behind sheets stacked above it — the tracing-paper stack itself never reorders. The toolbar's "Sheet i/N" label is the reliable indicator of which sheet is active.
+- The active sheet is lifted above later sheets while selected (visual z-index only). Content on the *other* sheets is not clickable while a lower sheet is active — navigate to a sheet to edit its content.
+- Deleting a sheet does not restore which sheet was active on undo (the document comes back; the active-sheet pointer self-heals to the top sheet if its sheet vanished).
 - Text box/callout resizing is not implemented (height grows with content; width is fixed at creation).
+- Sheets no longer get a random tilt (it misaligned them with the corner rulers); the paper stack looks perfectly aligned until real paper rotation lands.
 
 ## How to run
 

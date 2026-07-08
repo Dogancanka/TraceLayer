@@ -73,8 +73,18 @@ Task tracking for TraceLayer. Agents: mark tasks done as you complete them, add 
 - [x] Sheet previous/next navigation: toolbar buttons + "Sheet i/N" label, Alt+Up/Down and PageUp/PageDown shortcuts; introduces `activeSheetId` as the target for new strokes/text/callouts/imports, independent of the sheet stack's fixed z-order (see ARCHITECTURE.md "Active sheet vs. top sheet")
 - [x] Data model: `PaperSheet` gained `textBoxes`, `callouts`, and a reserved (unused) `calibration` placeholder; `ProjectFile.version` bumped to a real schema version (`SCHEMA_VERSION = 2`); `normalizeProject()` upgrades v1 files and older/partial v2 files with safe defaults
 - [x] Undo/redo: text box/callout create, delete, drag, and edit-session-start all push history the same way image drags already did — no changes needed to the history engine since the new arrays live inside `papers` (already snapshotted). Ctrl+Z/Y are suppressed while a text field has focus so native in-field text undo isn't hijacked.
-- [ ] Known simplification: when the active sheet isn't the topmost one, its highlight ring can be mostly covered by sheets stacked above it (translucent tracing-paper stacking is unchanged). The toolbar's "Sheet i/N" label is the reliable indicator; a more visible non-topmost-sheet affordance is future work if this turns out to matter in practice.
+- [x] Known simplification: when the active sheet isn't the topmost one, its highlight ring can be mostly covered by sheets stacked above it — **resolved in the 2026-07-08 bugfix pass**: the active sheet's group is lifted with a visual z-index (data order unchanged).
 - [ ] Not done (out of scope for this pass): resizing text boxes/callouts, per-textbox color/style, multiple callout arrow targets, per-sheet calibration UI (the `calibration` field is a placeholder only)
+
+## Bugfix pass (2026-07-08)
+
+- [x] Fix reversed typing in text boxes/callouts: contentEditable divs are now uncontrolled (no React text child; external changes sync to `innerText` only while unfocused) — re-rendering the child on every keystroke reset the caret to the start
+- [x] Rulers stay visible/aligned after New Sheet: random per-sheet tilt disabled (`newSheet()` → tilt 0; `normalizeProject()` flattens old tilts); `tilt` stays in the schema for future paper rotation
+- [x] Sheet navigation visibly switches sheets: per-sheet `.sheet-group` wrapper; active group lifted with z-index 10 (visual only, stack order/data unchanged); drawing surface raised to z 20, ruler stays 30
+- [x] Delete-sheet trash button next to the sheet controller: confirm only when the sheet has content, disabled for the last remaining sheet, sheet underneath becomes active, sheet's images removed too, undoable
+- [x] Scale popover fits all buttons (width 224px, wrapping preset row)
+- [x] Settings icon replaced with a real gear (feather cog outline, inline SVG, no dependency); TrashIcon added in the same style
+- [ ] Manual click-through of these fixes in a running window (typing in a note/callout, New Sheet + rulers, sheet nav visual lift, delete sheet, popover layout)
 
 ## Later
 

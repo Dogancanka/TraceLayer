@@ -17,10 +17,12 @@ import {
 } from './types';
 import type { Callout, ImageItem, PaperSheet, ProjectFile, ScaleCalibration, Selection, Stroke, TextBox, Tool } from './types';
 
-const randomTilt = () => (Math.random() - 0.5) * 1.6;
-const newSheet = (tilt = 0): PaperSheet => ({
+// Sheets are always tilt 0 for now: random per-sheet rotation misaligned
+// sheet edges with the fixed corner rulers. Re-enable only together with
+// proper paper rotation (pointer-coordinate mapping, see TASKS.md 0.2).
+const newSheet = (): PaperSheet => ({
   id: nextId(),
-  tilt,
+  tilt: 0,
   strokes: [],
   textBoxes: [],
   callouts: [],
@@ -201,11 +203,37 @@ export default function App() {
 
   const addPaper = useCallback(() => {
     pushHistory();
-    const sheet = newSheet(randomTilt());
+    const sheet = newSheet();
     setPapers((prev) => [...prev, sheet]);
     setActiveSheetId(sheet.id); // new sheet becomes the active target too
     setSelection(null); // whatever was selected is now under the new sheet
   }, [pushHistory]);
+
+  // Deletes the active sheet with everything on it (strokes, notes, callouts,
+  // images). Never deletes the last sheet — the toolbar disables the button.
+  const deleteSheet = useCallback(() => {
+    if (papers.length <= 1) return;
+    const sheet = activeSheet;
+    const hasContent =
+      sheet.strokes.length > 0 ||
+      sheet.textBoxes.length > 0 ||
+      sheet.callouts.length > 0 ||
+      images.some((img) => img.paperId === sheet.id);
+    if (hasContent) {
+      const ok = window.confirm(
+        `Delete sheet ${activeIndex + 1}? Its drawings, notes and images are removed. (Ctrl+Z undoes this.)`,
+      );
+      if (!ok) return;
+    }
+    pushHistory();
+    const remaining = papers.filter((p) => p.id !== sheet.id);
+    setPapers(remaining);
+    setImages((prev) => prev.filter((img) => img.paperId !== sheet.id));
+    // The sheet that was underneath is the natural next target (it just got
+    // revealed); when the bottom sheet was deleted, take the new bottom one.
+    setActiveSheetId(remaining[Math.max(0, activeIndex - 1)].id);
+    setSelection(null);
+  }, [papers, images, activeSheet, activeIndex, pushHistory]);
 
   // Full reset, unlike New Sheet. Undoable (snapshot is pushed first).
   const newProject = useCallback(() => {
@@ -435,6 +463,7 @@ export default function App() {
         sheetCount={papers.length}
         onPrevSheet={prevSheet}
         onNextSheet={nextSheet}
+        onDeleteSheet={deleteSheet}
         onNewProject={newProject}
         onToolChange={changeTool}
         onUndo={undo}

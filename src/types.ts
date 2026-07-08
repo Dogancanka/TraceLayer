@@ -50,7 +50,12 @@ export interface Callout {
 /** One sheet of tracing paper in the stack. */
 export interface PaperSheet {
   id: string;
-  /** Small random rotation (degrees) so stacked sheets read as physical paper. */
+  /**
+   * Sheet rotation in degrees. Kept in the file format for later paper
+   * rotation, but currently always 0: random tilt misaligned sheets with the
+   * fixed corner rulers, so it is disabled until real rotation (with pointer
+   * mapping) lands.
+   */
   tilt: number;
   /** Pen strokes drawn on this sheet. */
   strokes: Stroke[];
@@ -171,6 +176,9 @@ export function normalizeProject(project: ProjectFile): ProjectFile {
       : [{ id: nextId(), tilt: 0, strokes: [], textBoxes: [], callouts: [], calibration: null }];
   const papers = rawPapers.map((paper) => ({
     ...paper,
+    // Random per-sheet tilt is disabled for now (it misaligned sheets with
+    // the corner rulers), so older files' tilts are flattened on load too.
+    tilt: 0,
     strokes: (paper.strokes ?? []).map((stroke) => ({
       ...stroke,
       color: stroke.color ?? DEFAULT_STROKE_COLOR,

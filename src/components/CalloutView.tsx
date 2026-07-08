@@ -31,6 +31,17 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
   } | null>(null);
   const textRef = useRef<HTMLDivElement>(null);
 
+  // The contentEditable div is uncontrolled: while it has focus the browser
+  // owns its DOM. Writing state back into it on every keystroke resets the
+  // caret to the start (text came out reversed), so external text changes
+  // (undo/redo, project load, initial mount) sync here only while unfocused.
+  useEffect(() => {
+    const el = textRef.current;
+    if (el && document.activeElement !== el && el.innerText !== callout.text) {
+      el.innerText = callout.text;
+    }
+  }, [callout.text]);
+
   // Focus immediately if mounted already selected — the case right after
   // placing a new callout. Mount-only so re-selecting an existing callout by
   // dragging its grip/handle doesn't steal focus.
@@ -85,7 +96,6 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
           ref={textRef}
           className="callout-text"
           contentEditable={!ghost}
-          suppressContentEditableWarning
           data-placeholder="Note…"
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -93,9 +103,7 @@ export function CalloutView({ callout, selected, ghost, onSelect, onChange, onGe
           }}
           onFocus={onGestureStart}
           onInput={(e) => onChange(callout.id, { text: e.currentTarget.innerText })}
-        >
-          {callout.text}
-        </div>
+        />
       </div>
       {selected && !ghost && (
         <div

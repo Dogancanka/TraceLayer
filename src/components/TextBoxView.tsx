@@ -19,6 +19,17 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
   );
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // The contentEditable div is uncontrolled: while it has focus the browser
+  // owns its DOM. Writing state back into it on every keystroke resets the
+  // caret to the start (text came out reversed), so external text changes
+  // (undo/redo, project load, initial mount) sync here only while unfocused.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el && document.activeElement !== el && el.innerText !== box.text) {
+      el.innerText = box.text;
+    }
+  }, [box.text]);
+
   // Focus immediately if mounted already selected — the case right after
   // placing a new box. Deliberately mount-only (not keyed on `selected`) so
   // re-selecting an existing box by dragging its grip doesn't steal focus.
@@ -66,7 +77,6 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
         ref={contentRef}
         className="textbox-content"
         contentEditable={!ghost}
-        suppressContentEditableWarning
         data-placeholder="Note…"
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -74,9 +84,7 @@ export function TextBoxView({ box, selected, ghost, onSelect, onChange, onGestur
         }}
         onFocus={onGestureStart}
         onInput={(e) => onChange(box.id, { text: e.currentTarget.innerText })}
-      >
-        {box.text}
-      </div>
+      />
     </div>
   );
 }

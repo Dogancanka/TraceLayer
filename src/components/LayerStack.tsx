@@ -1,4 +1,3 @@
-import { Fragment } from 'react';
 import type { CSSProperties } from 'react';
 import { ImageView } from './ImageView';
 import { TextBoxView } from './TextBoxView';
@@ -54,7 +53,11 @@ export function LayerStack({
   return (
     <div className="layer-stack">
       {papers.map((paper) => (
-        <Fragment key={paper.id}>
+        // Each sheet + its content lives in one group so navigating sheets can
+        // lift the whole active sheet above later sheets (see .sheet-group in
+        // styles.css). Purely visual: the papers array (and save format) keeps
+        // its fixed order.
+        <div key={paper.id} className={`sheet-group${paper.id === activeSheetId ? ' active' : ''}`}>
           <div
             className={`paper-sheet${paper.id === activeSheetId ? ' active-sheet' : ''}`}
             style={{ '--tilt': `${paper.tilt}deg` } as CSSProperties}
@@ -140,7 +143,7 @@ export function LayerStack({
               onGestureStart={onGestureStart}
             />
           ))}
-        </Fragment>
+        </div>
       ))}
     </div>
   );

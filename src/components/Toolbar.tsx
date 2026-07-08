@@ -22,6 +22,7 @@ import {
   RedoIcon,
   RulerIcon,
   SaveIcon,
+  TrashIcon,
   UndoIcon,
   XIcon,
 } from './icons';
@@ -51,6 +52,8 @@ interface ToolbarProps {
   sheetCount: number;
   onPrevSheet: () => void;
   onNextSheet: () => void;
+  /** Deletes the active sheet. Disabled in the UI when only one sheet exists. */
+  onDeleteSheet: () => void;
   onNewProject: () => void;
   onToolChange: (tool: Tool) => void;
   onUndo: () => void;
@@ -87,6 +90,7 @@ export function Toolbar({
   sheetCount,
   onPrevSheet,
   onNextSheet,
+  onDeleteSheet,
   onNewProject,
   onToolChange,
   onUndo,
@@ -289,6 +293,15 @@ export function Toolbar({
           <ChevronDownIcon />
         </button>
       </div>
+      <button
+        type="button"
+        className="icon-btn"
+        onClick={onDeleteSheet}
+        disabled={ghost || sheetCount <= 1}
+        title={sheetCount <= 1 ? 'The last sheet cannot be deleted' : 'Delete the active sheet (asks first if it has content)'}
+      >
+        <TrashIcon />
+      </button>
 
       <div className="toolbar-sep" />
 

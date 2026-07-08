@@ -67,6 +67,20 @@ body,
   inset: 0;
 }
 
+/* One group per sheet: the paper div plus that sheet's images/strokes/notes.
+   Same box as the layer stack, so child layout is unchanged. */
+.sheet-group {
+  position: absolute;
+  inset: 0;
+}
+
+/* The active (navigated-to) sheet is lifted above later sheets so Prev/Next
+   visibly switches sheets and its content stays editable. Must stay below the
+   drawing surface (20), ruler (30), and toolbar (50). */
+.sheet-group.active {
+  z-index: 10;
+}
+
 .paper-sheet {
   position: absolute;
   /* Extra room at the bottom so the control bar sits below the sheet,
@@ -139,6 +153,8 @@ body,
 .drawing-surface {
   position: absolute;
   inset: 0;
+  /* Above the lifted active sheet group (10), below the ruler (30). */
+  z-index: 20;
 }
 
 .drawing-surface.pen {
@@ -646,9 +662,10 @@ body,
   font-size: 12px;
 }
 
-/* Compact and centered on its button so it cannot be pushed off-window. */
+/* Centered on its button so it cannot be pushed off-window. Wide enough for
+   the three presets plus Clear on one row. */
 .scale-popover {
-  width: 168px;
+  width: 224px;
   right: auto;
   left: 50%;
   transform: translateX(-50%);
@@ -656,6 +673,7 @@ body,
 
 .scale-presets {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
 }
 
