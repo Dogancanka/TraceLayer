@@ -480,26 +480,28 @@ body,
   cursor: crosshair;
 }
 
-/* ---- Toolbar (full-width bottom bar; warm beige, paper-like) ----
+/* ---- Toolbar (compact bottom-center dock; warm beige, paper-like) ----
 
-   UI chrome: independent of paper/window content size. Fixed to the bottom
-   edge, full window width, ONE compact row of icon buttons grouped by
-   separators. All controls fit without wrapping or scrolling at the minimum
-   window width (760px, enforced by minWidth in electron/main.ts) — if you
-   add a control, verify the row still fits ~740px worst case (image
-   selected). Tool option dots (pen/callout) float in a small popover ABOVE
-   their button, so they never widen the row. Keep the root `toolbar` class —
-   the Ghost Mode hover check in App.tsx matches `.toolbar`. */
+   UI chrome: independent of paper/window content size. A compact dock,
+   bottom-center, sized to its content only (no full-width stretching, no
+   spacer zones) — ONE row of icon buttons grouped by thin separators. All
+   controls fit without wrapping or scrolling at the minimum window width
+   (760px, enforced by minWidth in electron/main.ts) — if you add a control,
+   verify the row still fits ~740px worst case (image selected). Tool option
+   dots (pen/callout) float in a small popover ABOVE their button, so they
+   never widen the row. Keep the root `toolbar` class — the Ghost Mode hover
+   check in App.tsx matches `.toolbar`. */
 
 .toolbar {
   position: fixed;
-  left: 8px;
-  right: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 8px;
   z-index: 50;
+  width: fit-content;
+  max-width: calc(100vw - 16px);
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 2px;
   padding: 4px 8px;
   border-radius: 10px;
@@ -588,10 +590,9 @@ body,
   color: #fff;
 }
 
-/* Collapsed state: a small pill handle at the bottom-left, still `.toolbar`
-   so the Ghost Mode hover check keeps working. */
+/* Collapsed state: a small pill handle, bottom-center like the dock, still
+   `.toolbar` so the Ghost Mode hover check keeps working. */
 .toolbar-collapsed {
-  right: auto;
   padding: 3px;
 }
 

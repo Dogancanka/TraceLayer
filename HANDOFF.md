@@ -2,11 +2,13 @@
 
 > Agents: rewrite the "Current state" section after every change. Keep history short — this file describes *now*, not a changelog.
 
-**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: full-width bottom bar)
+**Last updated:** 2026-07-08 (branch `fix-annotation-anchors-and-sheet-nav`: bottom-center compact dock)
 
 ## Current state
 
-Latest: **Control bar back at the bottom — full-width, one row, never clipped.** The left toolbox didn't work in practice. The bar is now fixed to the bottom edge spanning the full window width (8px margins), one compact row, centered content, same beige style/groups/tooltips. It stays fully visible independent of window size: **`minWidth: 760`** in `electron/main.ts` is a hard floor matched to the row's worst-case width (~740px, image selected) — no wrapping, no scrolling, no clipping (budget documented on `.toolbar` in styles.css; re-verify when adding controls). Pen/callout option dots now float in a small popover **above** their button (`.tool-wrap`/`.pen-options`), so activating a tool never widens the row. Scale/settings popovers open above their buttons again (absolute, viewport-height-capped). Collapse pill sits bottom-left. Startup unchanged: always centered 800×500; `minHeight` now 320. Paper margins back to `18px 18px 52px 18px` with `Ruler.tsx` constants synced (left ruler back at the left edge). Ghost Mode untouched (`.toolbar` hover contract intact). `npm run typecheck` and `npm run build` pass; not clicked through in a running window.
+Latest: **Bottom bar is now a compact bottom-center dock.** The full-width bar left large empty blank areas on both sides of the content. CSS-only fix on `.toolbar`: `left: 50%; transform: translateX(-50%); width: fit-content; max-width: calc(100vw - 16px)` — the dock hugs its content, sits bottom-center, no stretching, no spacer zones, independent of paper/window width. The collapsed pill is bottom-center too. The transform is fine for the popovers (they're `position: absolute` relative to their `.settings-wrap`/`.tool-wrap` anchors, not `fixed`). Everything else from the previous pass holds:
+
+Earlier: **Control bar at the bottom — one row, never clipped.** The bar is one compact row, same beige style/groups/tooltips. It stays fully visible independent of window size: **`minWidth: 760`** in `electron/main.ts` is a hard floor matched to the row's worst-case width (~740px, image selected) — no wrapping, no scrolling, no clipping (budget documented on `.toolbar` in styles.css; re-verify when adding controls). Pen/callout option dots now float in a small popover **above** their button (`.tool-wrap`/`.pen-options`), so activating a tool never widens the row. Scale/settings popovers open above their buttons again (absolute, viewport-height-capped). Collapse pill sits bottom-left. Startup unchanged: always centered 800×500; `minHeight` now 320. Paper margins back to `18px 18px 52px 18px` with `Ruler.tsx` constants synced (left ruler back at the left edge). Ghost Mode untouched (`.toolbar` hover contract intact). `npm run typecheck` and `npm run build` pass; not clicked through in a running window.
 
 Earlier state:
 
